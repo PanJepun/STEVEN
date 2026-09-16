@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Laporan Iuran - STEVEN FINAL</title>
+<title>Laporan Iuran - STEVEN FINAL FIX GITHUB</title>
 <style>
 * { box-sizing: border-box; }
 body { font-family: 'Segoe UI', Arial; margin:0; padding:15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height:100vh; }
@@ -55,7 +55,7 @@ tr:hover { background:#f5f3ff; }
     <button class="btn btn-print" onclick="window.print()">🖨️ Print Laporan</button>
   </div>
   <div class="table-wrap">
-    <table id="tabelIuran"><thead><tr><th>No</th><th>NO_KK</th><th>Nama</th><th>Status Klg</th><th>Lingkungan</th><th>Tarif Master</th><th>Status</th><th>Tgl Bayar</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+    <table id="tabelIuran"><thead><tr><th>No</th><th>NO_KK</th><th>Nama</th><th>Status Klg</th><th>Lingkungan</th><th>Tarif Master</th><th>Status</th><th>Tgl Bayar</th><th>Aksi</th></tr></thead><tbody><tr><td colspan="9">Loading data dari Firebase...</td></tr></tbody></table>
   </div>
   <div class="rekap-box">
     <div class="rekap-item"><div class="angka" id="totalLunas">0 Orang</div><div class="label">SUDAH BAYAR</div></div>
@@ -70,9 +70,12 @@ tr:hover { background:#f5f3ff; }
 <script>
 const { jsPDF } = window.jspdf;
 const firebaseConfig = { apiKey: "AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI", databaseURL: "https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "restopro2026-60038" };
-firebase.initializeApp(firebaseConfig); const db = firebase.database();
-let dataList = []; let dataFiltered = []; let tipeIuran = 'kematian'; const PATH = "STEVEN";
-document.getElementById("selectBulan").value = new Date().getMonth() + 1; document.getElementById("selectTahun").value = new Date().getFullYear();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let dataList = []; let dataFiltered = []; let tipeIuran = 'kematian';
+const PATH = "STEVEN";
+document.getElementById("selectBulan").value = new Date().getMonth() + 1;
+document.getElementById("selectTahun").value = new Date().getFullYear();
 
 function tglIndo(tgl){
   if(!tgl||tgl=='-'||tgl=='') return '-';
@@ -81,10 +84,16 @@ function tglIndo(tgl){
   return `${p[2]} ${b[parseInt(p[1])-1]} ${p[0]}`;
 }
 
+// FIX GITHUB BEB - TAMBAH ERROR HANDLER
 db.ref(PATH + "/STEVEN_dataWarga").on("value", (snapshot) => {
   let dataObj = snapshot.val() || {};
   dataList = Array.isArray(dataObj)? dataObj.filter(x=>x) : Object.values(dataObj).filter(x=>x);
+  console.log("Firebase OK, data:", dataList.length);
   filterData();
+}, (error) => {
+  console.error("Firebase GAGAL Beb:", error);
+  document.querySelector("#tabelIuran tbody").innerHTML = `<tr><td colspan="9" style="color:red">Firebase Error: ${error.message}<br>Buka Firebase Console > Rules > ubah jadi public Beb!</td></tr>`;
+  alert("Firebase Error Beb: " + error.message + "\n\nBuka Firebase Console > Realtime Database > Rules > ubah jadi true Beb!");
 });
 
 function gantiTab(tipe){
@@ -97,8 +106,8 @@ function gantiTab(tipe){
 }
 
 function filterData(){
-  let tahun = document.getElementById('selectTahun').value;
-  let bulan = document.getElementById('selectBulan').value;
+  let tahun = document.getElementById('selectTahun').value.toString();
+  let bulan = document.getElementById('selectBulan').value.toString(); // FIX BEB - WAJIB toString() buat GitHub
   let key = document.getElementById('search').value.toLowerCase().trim();
   let periode = tipeIuran === 'kematian'? `${tahun}-${bulan.padStart(2,'0')}` : tahun;
 
@@ -119,33 +128,31 @@ function renderTable(periode){
   let tbody = document.querySelector("#tabelIuran tbody"); tbody.innerHTML = "";
   let jmlLunas = 0, jmlBelum = 0, totalUangMasuk = 0, totalHarusnya = 0;
 
+  if(dataFiltered.length === 0){
+    tbody.innerHTML = `<tr><td colspan="9">Data kosong / belum ada warga Beb</td></tr>`;
+    return;
+  }
+
   dataFiltered.forEach((d,i)=>{
     let indexAsli = dataList.indexOf(d);
     let no_kk = d.no_kk || '-';
     let nama = d.nama || '-';
     let status_keluarga = d.status_keluarga || '-';
     let lingkungan = d.lingkungan_utama || d.kelompok || '-';
-
-    // NOMINAL DARI MASTER BEB - BUKAN DEFAULT
     let tarifMaster = tipeIuran === 'kematian'? parseInt(d.iuran_kematian) || 0 : parseInt(d.iuran_tahunan) || parseInt(d.iuran_lingkungan) || 0;
-
     let fieldRiwayat = tipeIuran === 'kematian'? 'riwayat_kematian' : 'riwayat_tahunan';
     if(!d[fieldRiwayat]) d[fieldRiwayat] = {};
     let dataBayar = d[fieldRiwayat][periode] || {};
     let status = dataBayar.status === "Lunas"? '<span class="lunas">LUNAS</span>' : '<span class="belum">BELUM</span>';
     let tglBayar = dataBayar.tanggal? tglIndo(dataBayar.tanggal) : '-';
     let jumlahBayar = parseInt(dataBayar.jumlah) || 0;
-
     totalHarusnya += tarifMaster;
     if(dataBayar.status === "Lunas"){ jmlLunas++; totalUangMasuk += jumlahBayar; } else { jmlBelum++; }
-
     let btnAksi = dataBayar.status === "Lunas"
-     ? `<button class="btn btn-kwitansi" onclick="cetakKwitansi(${indexAsli},'${periode}')">Kwitansi</button> <button class="btn btn-batal" onclick="batalBayar(${indexAsli},'${periode}')">Batal</button>`
+    ? `<button class="btn btn-kwitansi" onclick="cetakKwitansi(${indexAsli},'${periode}')">Kwitansi</button> <button class="btn btn-batal" onclick="batalBayar(${indexAsli},'${periode}')">Batal</button>`
       : `<button class="btn btn-bayar" onclick="bukaModal(${indexAsli},'${periode}',${tarifMaster})">Bayar</button>`;
-
     tbody.innerHTML += `<tr><td>${i+1}</td><td><b>${no_kk}</b></td><td style="text-align:left">${nama}</td><td>${status_keluarga}</td><td>${lingkungan}</td><td>Rp ${tarifMaster.toLocaleString('id-ID')}</td><td>${status}</td><td>${tglBayar}</td><td>${btnAksi}</td></tr>`;
   });
-
   document.getElementById("totalLunas").innerText = jmlLunas + " Orang";
   document.getElementById("totalBelum").innerText = jmlBelum + " Orang";
   document.getElementById("uangMasuk").innerText = "Rp " + totalUangMasuk.toLocaleString('id-ID');
