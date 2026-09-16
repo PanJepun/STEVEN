@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Data Warga STEVEN - v5.4.4 LUNAS IURAN BULANAN</title>
+<style>
+*{box-sizing:border-box}body{font-family:'Segoe UI',Arial;margin:0;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);height:100vh}
+.wrapper{display:flex;gap:15px;height:calc(100vh - 30px)}.form-panel,.list-panel{background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);padding:15px;border-radius:16px;box-shadow:0 8px 32px rgba(31,38,135,0.37)}.form-panel{width:45%;overflow-y:auto}.list-panel{width:55%;display:flex;flex-direction:column}
+.form-panel h3,.list-panel h3{margin:0 0 12px 0;color:#4c1d95;font-size:16px;text-align:center;border-bottom:2px solid #8b5cf6;padding-bottom:8px;font-weight:700}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:span 2}
+label{font-size:11px;font-weight:600;display:block;margin-bottom:4px;color:#4b5563}
+input,select{width:100%;padding:6px 8px;font-size:11px;border:1px solid #d1d5db;border-radius:6px;height:28px;background:#fff}
+input:focus,select:focus{border-color:#8b5cf6;outline:none;box-shadow:0 0 0 3px rgba(139,92,246,0.2)}
+.dropdown-group{display:flex;gap:5px;align-items:center}.dropdown-group select{flex:1}
+.btn-plus{background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-weight:bold}
+.btn-del{background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-weight:bold}
+.input-group{display:flex;gap:6px;align-items:center}.input-group input{flex:1}
+.check-inline{display:flex;align-items:center;gap:4px;background:#f3f4f6;padding:0 10px;height:28px;border-radius:6px;font-size:10px;font-weight:800;border:1px solid #d1d5db;cursor:pointer;white-space:nowrap}
+.check-inline input{width:14px;height:14px}
+.check-inline:has(input:checked){background:#dcfce7;border-color:#22c55e;color:#15803d}
+.check-inline.belum:has(input:not(:checked)){background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+.preview-img{width:60px;height:60px;border-radius:50%;object-fit:cover;border:3px solid #8b5cf6;margin:8px auto;display:block}
+.btn-wrap{display:flex;gap:8px;margin-top:12px}.btn{flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:12px}
+.btn-update{background:linear-gradient(135deg,#f59e0b,#d97706);display:none}.btn-reset{background:linear-gradient(135deg,#64748b,#475569)}
+.search-box{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px;margin-bottom:10px}.table-wrap{flex:1;overflow:auto;border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:10px;background:white;border-radius:10px;overflow:hidden}
+th{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;padding:7px;position:sticky;top:0;font-weight:600}
+td{border-bottom:1px solid #f1f5f9;padding:5px;cursor:pointer;text-align:center}
+.foto-tabel{width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid #e5e7eb}
+tr:hover{background:#f5f3ff}tr.selected{background:#ddd6fe!important}
+.btn-hapus{background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:bold;cursor:pointer}
+.modal{display:none;position:fixed;z-index:999;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.85);justify-content:center;align-items:center}
+.modal img{max-width:90%;max-height:90%;border-radius:12px;border:4px solid white}
+.modal span{position:absolute;top:20px;right:30px;color:white;font-size:30px;cursor:pointer}
+.usaha-box{display:flex;gap:5px}.usaha-box input[readonly]{background:#f3f4f6;font-weight:bold;color:#4c1d95}
+.hobby-wrap{border:1px solid #d1d5db;border-radius:6px;padding:5px;background:white}
+.hobby-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}.hobby-tag{background:#8b5cf6;color:white;padding:3px 8px;border-radius:12px;font-size:10px;display:flex;align-items:center;gap:4px}.hobby-tag span{cursor:pointer;font-weight:bold}
+.warning{color:#ef4444;font-size:10px;font-weight:bold;margin-top:3px}.info{color:#10b981;font-size:10px;font-weight:bold;margin-top:3px}
+.badge-lunas{background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:10px;font-weight:800;font-size:9px}.badge-belum{background:#fee2e2;color:#b91c1c;padding:2px 6px;border-radius:10px;font-weight:800;font-size:9px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrapper">
+<div class="form-panel">
+<h3>FORM DATA ENTRY - STEVEN v5.4.4</h3>
+<form id="formWarga">
+<input type="hidden" id="editIndex" value="-1"><input type="hidden" id="fotoBase64" name="foto"><input type="hidden" id="hobbyData" name="hobby">
+<div class="form-grid">
+<div><label>Tgl Daftar</label><input type="date" name="tgl" required></div>
+<div><label>NO_KK</label><input type="text" name="no_kk" id="no_kk" maxlength="16" placeholder="Ketik lalu TAB"><div class="warning" id="warningKK"></div><div class="info" id="infoKK"></div></div>
+<div><label>No. KTP</label><input type="text" name="nik" maxlength="16"></div>
+<div><label>Nama</label><input type="text" name="nama" required></div>
+<div><label>Status Keluarga</label><div class="dropdown-group"><select name="status_keluarga" id="selectStatusKeluarga"></select><button type="button" class="btn-plus" id="btnPlusStatus" onclick="showAdd('status_keluarga')">+</button><button type="button" class="btn-del" id="btnDelStatus" onclick="showDel('status_keluarga')">x</button></div></div>
+<div class="full"><label>Alamat</label><input type="text" name="alamat"></div>
+<div><label>Status Alamat</label><div class="dropdown-group"><select name="status_alamat" id="selectAlamat"></select><button type="button" class="btn-plus" onclick="showAdd('alamat')">+</button><button type="button" class="btn-del" onclick="showDel('alamat')">x</button></div></div>
+<div><label>Lingkungan</label><input type="text" name="lingkungan_utama"></div>
+<div><label>KGB</label><input type="text" name="sub_lingkungan"></div>
+<div><label>Tempat Lahir</label><input type="text" name="tempat"></div>
+<div><label>Tgl Lahir</label><div class="usaha-box"><input type="date" name="tgllahir" id="tgllahir"><input type="text" id="usia" placeholder="Usia" readonly></div></div>
+<div><label>Jenis Kelamin</label><select name="jk"><option>Laki-Laki</option><option>Perempuan</option></select></div>
+<div><label>Gol Darah</label><div class="dropdown-group"><select name="gol" id="selectGol"></select><button type="button" class="btn-plus" onclick="showAdd('gol')">+</button><button type="button" class="btn-del" onclick="showDel('gol')">x</button></div></div>
+<div class="full"><label>PEKERJAAN</label><input type="text" name="pekerjaan"></div>
+<div class="full"><label>KEAHLIAN / HOBBY</label><div class="hobby-wrap"><div class="hobby-list" id="hobbyList"></div><div class="dropdown-group"><select id="selectHobby"></select><button type="button" class="btn-plus" onclick="showAdd('hobby')">+</button><button type="button" class="btn-del" onclick="showDel('hobby')">x</button></div><input type="text" id="hobbyTambahan" placeholder="Sebutkan..." style="margin-top:5px;display:none;"></div></div>
+
+<div><label>UANG PANGKAL LINGKUNGAN (KL) 1x</label><div class="input-group"><input type="number" name="pangkal_lingkungan" id="pangkal_lingkungan" placeholder="150000"><label class="check-inline"><input type="checkbox" id="checkLunasLingkungan"> LUNAS KL</label></div></div>
+<div><label>UANG PANGKAL KEMATIAN (KK) 1x</label><div class="input-group"><input type="number" name="pangkal_kematian" id="pangkal_kematian" placeholder="50000"><label class="check-inline"><input type="checkbox" id="checkLunasKematian"> LUNAS KK</label></div></div>
+
+<!-- INI YANG KAMU MINTA BEB - IURAN BULANAN ADA CENTANG LUNAS/BELUM -->
+<div><label>Iuran Lingkungan Bulanan</label><div class="input-group"><input type="number" name="iuran_bulanan" id="iuran_bulanan" placeholder="20000" value="20000"><label class="check-inline"><input type="checkbox" id="checkLunasBulananLing"> LUNAS</label></div></div>
+<div><label>Iuran Kematian Bulanan</label><div class="input-group"><input type="number" name="iuran_kematian" id="iuran_kematian" placeholder="10000" value="10000"><label class="check-inline"><input type="checkbox" id="checkLunasBulananMati"> LUNAS</label></div></div>
+
+<div><label>No. HP</label><input type="text" name="hp" id="hp"></div>
+<div><label>Kelompok</label><input type="text" name="kelompok" id="kelompok"></div>
+
+<div><label>Status Rumah</label><div class="dropdown-group"><select name="status_rumah" id="selectRumah"></select><button type="button" class="btn-plus" onclick="showAdd('rumah')">+</button><button type="button" class="btn-del" onclick="showDel('rumah')">x</button></div></div>
+<div style="display:flex;align-items:end;font-size:9px;color:#64748b;">Centang LUNAS = tidak masuk tagihan</div>
+<div class="full" style="text-align:center;"><label>Foto</label><input type="file" id="inputFoto" accept="image/*"><img id="preview" class="preview-img" src="https://via.placeholder.com/60/CCCCCC/FFFFFF?text=Foto"></div>
+</div>
+<div class="btn-wrap"><button type="submit" id="btnSimpan" class="btn">+ Simpan</button><button type="button" id="btnUpdate" class="btn btn-update">Update</button><button type="button" id="btnReset" class="btn btn-reset">Reset</button></div>
+</form>
+</div>
+<div class="list-panel">
+<h3>DATA - <span id="jmlWarga">0</span> Warga</h3>
+<div class="search-box"><input type="text" id="searchNoKK" placeholder="NO_KK" onkeyup="filterData()"><input type="text" id="searchNama" placeholder="Nama" onkeyup="filterData()"><input type="text" id="searchLingkungan" placeholder="Lingkungan" onkeyup="filterData()"><input type="text" id="searchKelompok" placeholder="Kelompok" onkeyup="filterData()"><input type="text" id="searchSub" placeholder="Sub" onkeyup="filterData()"></div>
+<div class="table-wrap"><table id="tabelData"><thead><tr><th>Foto</th><th>NO_KK</th><th>Nama</th><th>Status Klg</th><th>Lingk.</th><th>Kelompok</th><th>Pangkal KL/KK</th><th>Iuran Bulanan</th><th>HP</th><th>Aksi</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+<div id="modalFoto" class="modal"><span onclick="document.getElementById('modalFoto').style.display='none'">&times;</span><img id="modalImg"></div>
+<script>
+var firebaseConfig={apiKey:"AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",authDomain:"restopro2026-60038.firebaseapp.com",databaseURL:"https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"restopro2026-60038"};
+var app=firebase.initializeApp(firebaseConfig);var db=firebase.database();
+var dataList=[];var dataFiltered=[];var editIndex=-1;var selectedHobbies=[];var currentKK="";
+var kodeData={gol:{"-":"-","A":"A","B":"B","AB":"AB","O":"O"},rumah:{"Milik Sendiri":"Milik Sendiri"},alamat:{"Tetap":"Tetap","Kontrak":"Kontrak"},status_keluarga:{"Kepala Keluarga":"Kepala Keluarga","Istri":"Istri","Anak":"Anak","Menantu":"Menantu","Cucu":"Cucu","Orang Tua":"Orang Tua","Mertua":"Mertua","Famili Lain":"Famili Lain"},hobby:{"Menjahit":"Menjahit","Bangunan":"Bangunan","Kelistrikan":"Kelistrikan","Otomotif":"Otomotif","Bahasa Asing":"Bahasa Asing","Fotografi":"Fotografi","Tukang Kayu":"Tukang Kayu","Bela Diri":"Bela Diri","Sepak Bola":"Sepak Bola","Bulutangkis":"Bulutangkis","Yoga":"Yoga","Menyanyi":"Menyanyi","Musik":"Musik","Lain-lain":"Lain-lain"}};
+var PATH="STEVEN";var form=document.getElementById("formWarga");var noKKInput=document.getElementById("no_kk");var selectStatusKeluarga=document.getElementById("selectStatusKeluarga");
+function renderStatusKeluargaDropdown(isKKBaru){
+  var select=document.getElementById("selectStatusKeluarga");var valLama=select.value;select.innerHTML="";
+  if(isKKBaru){
+    select.innerHTML='<option value="Kepala Keluarga">Kepala Keluarga</option>';
+    document.getElementById("warningKK").innerText="KK Baru! Wajib Kepala Keluarga";
+    document.getElementById("infoKK").innerText="";
+    document.getElementById("btnPlusStatus").disabled=true;document.getElementById("btnDelStatus").disabled=true;
+  } else {
+    select.innerHTML="<option value=''>-Pilih-</option>";
+    for(var key in kodeData.status_keluarga){select.innerHTML+='<option value="'+key+'">'+kodeData.status_keluarga[key]+'</option>';}
+    document.getElementById("btnPlusStatus").disabled=false;document.getElementById("btnDelStatus").disabled=false;
+    if(valLama) select.value=valLama;
+  }
+}
+noKKInput.addEventListener("blur",function(){
+  var no_kk=this.value.trim();if(!no_kk) return;currentKK=no_kk;
+  var anggotaKK=dataList.filter(function(d){return d.no_kk===no_kk;});
+  if(anggotaKK.length>0){document.getElementById("infoKK").innerText="KK Ditemukan: "+anggotaKK.length+" Anggota";document.getElementById("warningKK").innerText="";renderStatusKeluargaDropdown(false);}
+  else{renderStatusKeluargaDropdown(true);selectStatusKeluarga.value="Kepala Keluarga";}
+});
+db.ref(PATH+"/STEVEN_dataWarga").on("value",function(snapshot){
+  var val=snapshot.val();
+  if(!val) dataList=[];
+  else if(Array.isArray(val)) dataList=val.filter(function(x){return x;});
+  else dataList=Object.values(val).filter(function(x){return x;});
+  document.getElementById("jmlWarga").innerText=dataList.length;filterData();
+});
+db.ref(PATH+"/STEVEN_kodeData").on("value",function(snapshot){var data=snapshot.val();if(data){kodeData=Object.assign({},kodeData,data);}renderAllSelect();});
+function saveDataWarga(){db.ref(PATH+"/STEVEN_dataWarga").set(dataList);}
+function saveKodeData(){db.ref(PATH+"/STEVEN_kodeData").set(kodeData);}
+document.getElementById("inputFoto").addEventListener("change",function(){
+  var file=this.files[0];if(file){
+    var reader=new FileReader();
+    reader.onload=function(e){document.getElementById("preview").src=e.target.result;document.getElementById("fotoBase64").value=e.target.result;};
+    reader.readAsDataURL(file);
+  }
+});
+document.getElementById("tgllahir").addEventListener("change",function(){
+  if(!this.value) return;var tgl=new Date(this.value);var now=new Date();var tahun=now.getFullYear()-tgl.getFullYear();var bulan=now.getMonth()-tgl.getMonth();var hari=now.getDate()-tgl.getDate();
+  if(hari<0){bulan--;hari+=new Date(now.getFullYear(),now.getMonth(),0).getDate();}if(bulan<0){tahun--;bulan+=12;}
+  document.getElementById("usia").value=tahun+" Thn "+bulan+" Bln "+hari+" Hr";
+});
+document.getElementById("selectHobby").addEventListener("change",function(){
+  var val=this.value;if(val &&!selectedHobbies.find(function(h){return h.nama===val;})){
+    if(["Bahasa Asing","Bela Diri","Musik","Lain-lain"].indexOf(val)>=0){document.getElementById("hobbyTambahan").style.display="block";return;}
+    selectedHobbies.push({nama:val,detail:""});renderHobby();this.value="";
+  }
+});
+document.getElementById("hobbyTambahan").addEventListener("blur",function(){
+  var val=document.getElementById("selectHobby").value;if(val && this.value){selectedHobbies.push({nama:val,detail:this.value});renderHobby();this.value="";this.style.display="none";document.getElementById("selectHobby").value="";}
+});
+function renderHobby(){var wrap=document.getElementById("hobbyList");wrap.innerHTML="";selectedHobbies.forEach(function(h,i){wrap.innerHTML+='<div class="hobby-tag">'+h.nama+' '+(h.detail?'('+h.detail+')':'')+' <span onclick="hapusHobby('+i+')">x</span></div>';});document.getElementById("hobbyData").value=JSON.stringify(selectedHobbies);}
+function hapusHobby(i){selectedHobbies.splice(i,1);renderHobby();}
+function renderAllSelect(){renderSelect('gol');renderSelect('rumah');renderSelect('alamat');renderSelect('hobby');if(document.getElementById("selectStatusKeluarga").options.length<=1){renderStatusKeluargaDropdown(false);} else {var isBaru=document.getElementById("warningKK").innerText.indexOf("KK Baru")>=0;if(!isBaru) renderSelect('status_keluarga');}}
+function renderSelect(type){var id='select'+type.split('_').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join('');var select=document.getElementById(id);if(!select) return;if(type==='status_keluarga' && document.getElementById("warningKK").innerText.indexOf("KK Baru")>=0) return;var val=select.value;select.innerHTML="<option value=''>-Pilih-</option>";for(var key in kodeData[type]){select.innerHTML+='<option value="'+key+'">'+kodeData[type][key]+'</option>';}if(val) select.value=val;}
+function showAdd(type){if(type==='status_keluarga' && document.getElementById("warningKK").innerText.indexOf("KK Baru")>=0){alert("KK Baru wajib Kepala Keluarga dulu Beb!");return;}var val=prompt("Tambah data baru untuk "+type.toUpperCase());if(val && val.trim() &&!kodeData[type][val.trim()]){kodeData[type][val.trim()]=val.trim();renderAllSelect();saveKodeData();}}
+function showDel(type){var id='select'+type.split('_').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join('');var val=document.getElementById(id).value;if(val && confirm("Hapus: "+val+"?")){delete kodeData[type][val];renderAllSelect();saveKodeData();}}
+form.addEventListener("submit",function(e){
+  e.preventDefault();var formData=new FormData(this);var data={};formData.forEach(function(v,k){data[k]=v;});
+  data.lunas_pangkal_lingkungan=document.getElementById('checkLunasLingkungan').checked;
+  data.lunas_pangkal_kematian=document.getElementById('checkLunasKematian').checked;
+  data.lunas_iuran_bulanan_ling=document.getElementById('checkLunasBulananLing').checked;
+  data.lunas_iuran_bulanan_mati=document.getElementById('checkLunasBulananMati').checked;
+  var tgl=data.tgl || new Date().toISOString().split('T')[0];
+  if(data.lunas_pangkal_lingkungan){data.riwayat_pangkal_lingkungan={jumlah:data.pangkal_lingkungan||150000,tanggal:tgl,status:"Lunas"};}
+  if(data.lunas_pangkal_kematian){data.riwayat_pangkal_kematian={jumlah:data.pangkal_kematian||50000,tanggal:tgl,status:"Lunas"};}
+  var anggotaKK=dataList.filter(function(d){return d.no_kk===data.no_kk;});
+  if(anggotaKK.length===0 && data.status_keluarga!=="Kepala Keluarga"){alert("KK Baru wajib Kepala Keluarga dulu Beb!");return;}
+  dataList.push(data);db.ref(PATH+"/STEVEN_dataWarga").set(dataList).then(function(){filterData();resetForm();});
+});
+function filterData(){var no_kk=document.getElementById('searchNoKK').value.toLowerCase();var nama=document.getElementById('searchNama').value.toLowerCase();var lingk=document.getElementById('searchLingkungan').value.toLowerCase();var kel=document.getElementById('searchKelompok').value.toLowerCase();var sub=document.getElementById('searchSub').value.toLowerCase();dataFiltered=dataList.filter(function(d){return (d.no_kk||'').toLowerCase().indexOf(no_kk)>=0 && (d.nama||'').toLowerCase().indexOf(nama)>=0 && (d.lingkungan_utama||'').toLowerCase().indexOf(lingk)>=0 && (d.kelompok||'').toLowerCase().indexOf(kel)>=0 && (d.sub_lingkungan||'').toLowerCase().indexOf(sub)>=0;});renderTable();}
+function renderTable(){var tbody=document.querySelector("#tabelData tbody");tbody.innerHTML="";var dataToShow=(dataFiltered.length>0 || document.getElementById('searchNoKK').value || document.getElementById('searchNama').value)?dataFiltered:dataList;dataToShow.forEach(function(d){var foto=d.foto||"https://via.placeholder.com/32/CCCCCC/FFFFFF?text=?";var indexAsli=dataList.indexOf(d);var kl=d.lunas_pangkal_lingkungan || (d.riwayat_pangkal_lingkungan && d.riwayat_pangkal_lingkungan.status==="Lunas");var kk=d.lunas_pangkal_kematian || (d.riwayat_pangkal_kematian && d.riwayat_pangkal_kematian.status==="Lunas");var ling=d.lunas_iuran_bulanan_ling;var mati=d.lunas_iuran_bulanan_mati;var statusPangkal=(kl?'<span class=badge-lunas>KL:LUNAS</span>':'<span class=badge-belum>KL:BELUM</span>')+' '+(kk?'<span class=badge-lunas>KK:LUNAS</span>':'<span class=badge-belum>KK:BELUM</span>');var statusBulanan=(ling?'<span class=badge-lunas>LING:LUNAS</span>':'<span class=badge-belum>LING:BELUM</span>')+' '+(mati?'<span class=badge-lunas>MATI:LUNAS</span>':'<span class=badge-belum>MATI:BELUM</span>');var tr=document.createElement("tr");tr.innerHTML='<td><img class="foto-tabel" src="'+foto+'" ondblclick="showModal(\''+foto+'\')"></td><td><b>'+(d.no_kk||'-')+'</b></td><td>'+d.nama+'</td><td>'+(d.status_keluarga||'-')+'</td><td>'+(d.lingkungan_utama||'-')+'</td><td>'+(d.kelompok||'-')+'</td><td style="font-size:9px">'+statusPangkal+'</td><td style="font-size:9px">'+statusBulanan+'</td><td>'+(d.hp||'-')+'</td><td><button class="btn-hapus" onclick="hapusData('+indexAsli+')">Hapus</button></td>';tr.onclick=function(e){if(e.target.tagName!=='BUTTON') loadToForm(indexAsli,tr);};tbody.appendChild(tr);});}
+function hapusData(index){if(confirm("Yakin hapus: "+dataList[index].nama+"?")){dataList.splice(index,1);saveDataWarga();filterData();resetForm();}}
+function showModal(src){document.getElementById('modalImg').src=src;document.getElementById('modalFoto').style.display='flex';}
+function loadToForm(index,row){editIndex=index;document.querySelectorAll("#tabelData tr").forEach(function(r){r.classList.remove("selected");});row.classList.add("selected");var data=dataList[index];try{selectedHobbies=data.hobby?JSON.parse(data.hobby):[];}catch(e){selectedHobbies=[];}renderHobby();for(var key in data){if(form.elements[key] && form.elements[key].type!=='checkbox') form.elements[key].value=data[key];}document.getElementById('checkLunasLingkungan').checked=data.lunas_pangkal_lingkungan===true || data.lunas_pangkal_lingkungan==="true" || (data.riwayat_pangkal_lingkungan && data.riwayat_pangkal_lingkungan.status==="Lunas");document.getElementById('checkLunasKematian').checked=data.lunas_pangkal_kematian===true || data.lunas_pangkal_kematian==="true" || (data.riwayat_pangkal_kematian && data.riwayat_pangkal_kematian.status==="Lunas");document.getElementById('checkLunasBulananLing').checked=data.lunas_iuran_bulanan_ling===true || data.lunas_iuran_bulanan_ling==="true";document.getElementById('checkLunasBulananMati').checked=data.lunas_iuran_bulanan_mati===true || data.lunas_iuran_bulanan_mati==="true";document.getElementById("preview").src=data.foto||"https://via.placeholder.com/60/CCCCCC/FFFFFF?text=Foto";if(data.tgllahir){var ev=new Event('change');document.getElementById("tgllahir").dispatchEvent(ev);}document.getElementById("btnSimpan").style.display="none";document.getElementById("btnUpdate").style.display="block";}
+document.getElementById("btnUpdate").onclick=function(){var formData=new FormData(form);var data={};formData.forEach(function(v,k){if(k!=='lunas_pangkal_lingkungan' && k!=='lunas_pangkal_kematian') data[k]=v;});data.lunas_pangkal_lingkungan=document.getElementById('checkLunasLingkungan').checked;data.lunas_pangkal_kematian=document.getElementById('checkLunasKematian').checked;data.lunas_iuran_bulanan_ling=document.getElementById('checkLunasBulananLing').checked;data.lunas_iuran_bulanan_mati=document.getElementById('checkLunasBulananMati').checked;var tgl=data.tgl||new Date().toISOString().split('T')[0];if(data.lunas_pangkal_lingkungan){data.riwayat_pangkal_lingkungan={jumlah:data.pangkal_lingkungan||150000,tanggal:tgl,status:"Lunas"};}if(data.lunas_pangkal_kematian){data.riwayat_pangkal_kematian={jumlah:data.pangkal_kematian||50000,tanggal:tgl,status:"Lunas"};}dataList[editIndex]=Object.assign({},dataList[editIndex],data);saveDataWarga();filterData();resetForm();};
+document.getElementById("btnReset").onclick=resetForm;
+function resetForm(){form.reset();selectedHobbies=[];renderHobby();document.getElementById("preview").src="https://via.placeholder.com/60/CCCCCC/FFFFFF?text=Foto";document.getElementById("fotoBase64").value="";document.getElementById("usia").value="";document.getElementById("warningKK").innerText="";document.getElementById("infoKK").innerText="";editIndex=-1;currentKK="";document.getElementById("btnSimpan").style.display="block";document.getElementById("btnUpdate").style.display="none";document.querySelectorAll("#tabelData tr").forEach(function(r){r.classList.remove("selected");});renderStatusKeluargaDropdown(false);document.getElementById("iuran_bulanan").value="20000";document.getElementById("iuran_kematian").value="10000";}
+renderAllSelect();
+</script>
+</body>
+</html>

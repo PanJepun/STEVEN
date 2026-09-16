@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Laporan Iuran Kematian - STEVEN</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',Arial;background:#f5f3ff;margin:0;padding:20px}
+h2{text-align:center;color:#5b21b6;margin-bottom:15px;font-weight:800;letter-spacing:0.5px}
+.tab-wrap{display:flex;gap:10px;margin-bottom:15px}
+.tab{flex:1;padding:12px;border:none;border-radius:10px;font-weight:bold;cursor:pointer}
+.tab.active{background:#7c3aed;color:white}
+.tab.inactive{background:#e5e7eb;color:#6b7280}
+.filter{display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap}
+.filter select,.filter input{padding:8px 12px;border-radius:8px;border:1px solid #d1d5db}
+.btn-print{background:#7c3aed;color:white;padding:8px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
+table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.05)}
+th{background:#7c3aed;color:white;padding:12px 8px;font-size:12px;text-align:center}
+td{padding:10px 8px;text-align:center;font-size:12px;border-bottom:1px solid #f1f5f9}
+.lunas{color:#10b981;font-weight:800}.belum{color:#ef4444;font-weight:800}
+.btn-bayar{background:#f59e0b;color:white;border:none;padding:5px 12px;border-radius:6px;font-weight:bold;font-size:11px;cursor:pointer}
+.btn-lunas{background:#dcfce7;color:#15803d;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:bold}
+.modal{display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:99}
+.modal-content{background:white;padding:20px;border-radius:12px;width:340px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<h2>LAPORAN IURAN KEMATIAN - STEVEN</h2>
+
+<div class="tab-wrap">
+  <button class="tab active" id="tabKematian" onclick="gantiTab('kematian')">IURAN KEMATIAN</button>
+  <button class="tab inactive" id="tabTahunan" onclick="gantiTab('tahunan')">IURAN TAHUNAN</button>
+</div>
+
+<div class="filter">
+  Bulan: <select id="selectBulan" onchange="filterData()">
+    <option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option><option value="04">April</option><option value="05">Mei</option><option value="06">Juni</option><option value="07">Juli</option><option value="08">Agustus</option><option value="09" selected>September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
+  </select>
+  Tahun: <input type="number" id="selectTahun" value="2026" onchange="filterData()" style="width:100px">
+  <input type="text" id="search" placeholder="Cari Nama / NO_KK..." onkeyup="filterData()" style="flex:1">
+  <button class="btn-print" onclick="window.print()">🖨️ Print Laporan</button>
+</div>
+
+<table>
+<thead><tr><th>No</th><th>NO_KK</th><th>Nama</th><th>Status Klg</th><th>Lingkungan</th><th>Tarif Master</th><th>Status</th><th>Tgl Bayar</th><th>Aksi</th></tr></thead>
+<tbody id="tbody"></tbody>
+</table>
+
+<div id="modalBayar" class="modal"><div class="modal-content">
+  <h4 id="judulModal"></h4>
+  <input type="hidden" id="idx"><input type="hidden" id="periode">
+  <label>Nama</label><input type="text" id="nama" readonly style="width:100%;padding:8px;margin:5px 0">
+  <label>Jumlah</label><input type="number" id="jumlah" style="width:100%;padding:8px;margin:5px 0">
+  <label>Tgl Bayar</label><input type="date" id="tgl" style="width:100%;padding:8px;margin:5px 0">
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button onclick="simpan()" style="flex:1;padding:10px;background:#7c3aed;color:white;border:none;border-radius:6px;font-weight:bold">Simpan</button>
+    <button onclick="document.getElementById('modalBayar').style.display='none'" style="flex:1;padding:10px;background:#64748b;color:white;border:none;border-radius:6px">Batal</button>
+  </div>
+</div></div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",databaseURL:"https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"restopro2026-60038"};
+firebase.initializeApp(firebaseConfig); const db=firebase.database();
+let dataList=[], tipe='kematian';
+
+function tglIndo(tgl){
+  if(!tgl||tgl=='-') return '-';
+  let b=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  let p=tgl.split('-'); if(p.length!=3) return tgl;
+  return `${p[2]} ${b[parseInt(p[1])-1]} ${p[0]}`;
+}
+
+db.ref("STEVEN/STEVEN_dataWarga").on("value",s=>{ dataList=s.val()||[]; filterData(); });
+
+function gantiTab(t){
+  tipe=t;
+  document.getElementById("tabKematian").className = t=='kematian'?'tab active':'tab inactive';
+  document.getElementById("tabTahunan").className = t=='tahunan'?'tab active':'tab inactive';
+  filterData();
+}
+
+function filterData(){
+  let th=document.getElementById("selectTahun").value;
+  let bl=document.getElementById("selectBulan").value;
+  let periode = tipe=='kematian'? `${th}-${bl}` : th; // 2026-09 untuk bulanan, 2026 untuk tahunan
+  let key=document.getElementById("search").value.toLowerCase();
+  let tbody=document.getElementById("tbody"); tbody.innerHTML="";
+
+  // TAMPILKAN SEMUA WARGA UNTUK PERIODE SEPTEMBER BEB
+  dataList.forEach((d,i)=>{
+    if(key &&!(d.nama||'').toLowerCase().includes(key) &&!(d.no_kk||'').toLowerCase().includes(key)) return;
+    let field = tipe=='kematian'? 'riwayat_kematian' : 'riwayat_tahunan';
+    if(!d[field]) d[field]={};
+    let bayar = d[field][periode];
+
+    let status = bayar && bayar.status=="Lunas"? `<span class="lunas">LUNAS</span>` : `<span class="belum">BELUM</span>`;
+    let tglBayar = bayar? tglIndo(bayar.tanggal) : '-';
+    let tarif = tipe=='kematian'? (parseInt(d.iuran_kematian)||50000) : (parseInt(d.iuran_tahunan)||50000);
+    let aksi = bayar?.status=="Lunas"? `<span class="btn-lunas">✓ ${tglBayar}</span>` : `<button class="btn-bayar" onclick="bukaBayar(${i},'${periode}',${tarif})">Bayar</button>`;
+
+    tbody.innerHTML+=`<tr>
+      <td>${i+1}</td><td><b>${d.no_kk||'-'}</b></td><td style="text-align:left">${d.nama||'-'}</td>
+      <td>${d.status_keluarga||'Kepala Keluarga'}</td><td>${d.lingkungan_utama||'-'}</td>
+      <td>Rp ${tarif.toLocaleString('id-ID')}</td><td>${status}</td><td>${tglBayar}</td><td>${aksi}</td>
+    </tr>`;
+  });
+}
+
+function bukaBayar(idx,periode,tarif){
+  document.getElementById("idx").value=idx;
+  document.getElementById("periode").value=periode;
+  document.getElementById("nama").value=dataList[idx].nama;
+  document.getElementById("jumlah").value=tarif;
+  document.getElementById("judulModal").innerText=`Bayar ${tipe=='kematian'?'Iuran Kematian':'Iuran Tahunan'} - ${periode}`;
+  document.getElementById("tgl").valueAsDate=new Date();
+  document.getElementById("modalBayar").style.display="flex";
+}
+function simpan(){
+  let idx=document.getElementById("idx").value;
+  let periode=document.getElementById("periode").value;
+  let jumlah=document.getElementById("jumlah").value;
+  let tgl=document.getElementById("tgl").value;
+  let field = tipe=='kematian'? 'riwayat_kematian' : 'riwayat_tahunan';
+  if(!dataList[idx][field]) dataList[idx][field]={};
+  dataList[idx][field][periode]={jumlah:jumlah,tanggal:tgl,status:"Lunas"};
+  db.ref("STEVEN/STEVEN_dataWarga").set(dataList).then(()=>{
+    document.getElementById("modalBayar").style.display="none";
+    filterData();
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Laporan Pangkal KL & KK - STEVEN - 1 File 2 Tab</title>
+<style>
+body{font-family:'Segoe UI',Arial;margin:0;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh}
+.wrapper{background:white;padding:15px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+h3{text-align:center;color:#4c1d95;margin:0 0 10px 0}
+.tabs{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
+.tab-btn{border:none;padding:10px 22px;border-radius:20px;font-weight:800;cursor:pointer;color:white;font-size:13px;transition:0.2s}
+.tab-kl{background:#cbd5e1;color:#475569} .tab-kl.active{background:linear-gradient(135deg,#10b981,#059669);color:white;box-shadow:0 4px 12px rgba(16,185,129,0.4)}
+.tab-kk{background:#cbd5e1;color:#475569} .tab-kk.active{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;box-shadow:0 4px 12px rgba(14,165,233,0.4)}
+.top-bar{display:flex;gap:10px;margin-bottom:12px}
+.top-bar input,.top-bar select{padding:10px;border-radius:8px;border:1px solid #d1d5db;flex:1}
+table{width:100%;border-collapse:collapse;font-size:12px;background:white;border-radius:10px;overflow:hidden}
+th{color:white;padding:12px;text-align:center}
+.th-kl{background:linear-gradient(135deg,#10b981,#059669)} .th-kk{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
+td{padding:10px;text-align:center;border-bottom:1px solid #f1f5f9}
+.nominal-lunas{color:#15803d;font-weight:800;background:#dcfce7;padding:5px 10px;border-radius:8px}
+.nominal-belum{color:#b91c1c;font-weight:800;background:#fee2e2;padding:5px 10px;border-radius:8px}
+.badge-lunas{background:#dcfce7;color:#15803d;padding:6px 12px;border-radius:20px;font-weight:800}
+.badge-belum{background:#fee2e2;color:#b91c1c;padding:6px 12px;border-radius:20px;font-weight:800}
+.btn{border:none;padding:7px 14px;border-radius:8px;font-weight:bold;cursor:pointer;color:white;font-size:11px;margin:2px}
+.btn-bayar{background:#f59e0b}.btn-batal{background:#ef4444}.btn-kl{background:#10b981}.btn-kk{background:#0ea5e9}
+.modal{display:none;position:fixed;z-index:999;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:center}
+.modal-content{background:white;padding:22px;border-radius:14px;width:360px}
+.modal-content input{width:100%;padding:10px;margin:6px 0 12px 0;border:1px solid #d1d5db;border-radius:8px}
+.hidden{display:none}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<div class="wrapper">
+  <h3>LAPORAN PANGKAL - STEVEN</h3>
+  
+  <!-- TAB PILIHAN BEB - 1 SCRIPT 2 PILIHAN -->
+  <div class="tabs">
+    <button id="btnKL" class="tab-btn tab-kl active" onclick="switchTab('KL')">🌿 Pangkal Lingkungan (KL)</button>
+    <button id="btnKK" class="tab-btn tab-kk" onclick="switchTab('KK')">💙 Pangkal Kematian (KK)</button>
+  </div>
+
+  <div class="top-bar">
+    <input type="text" id="searchKK" placeholder="Cari Nama / NO_KK..." onkeyup="filterData()">
+    <select id="filterStatus" onchange="filterData()"><option value="semua">Semua</option><option value="belum">Belum Lunas</option><option value="lunas">Sudah Lunas</option></select>
+  </div>
+
+  <!-- TABEL KL -->
+  <div id="wrapKL">
+    <table><thead><tr><th class="th-kl">No</th><th class="th-kl">NO_KK</th><th class="th-kl">Nama</th><th class="th-kl">Lingkungan</th><th class="th-kl">Nominal KL</th><th class="th-kl">Status KL</th><th class="th-kl">Tgl Bayar KL</th><th class="th-kl">Aksi</th></tr></thead><tbody id="tbodyKL"></tbody></table>
+  </div>
+
+  <!-- TABEL KK -->
+  <div id="wrapKK" class="hidden">
+    <table><thead><tr><th class="th-kk">No</th><th class="th-kk">NO_KK</th><th class="th-kk">Nama</th><th class="th-kk">Lingkungan</th><th class="th-kk">Nominal KK</th><th class="th-kk">Status KK</th><th class="th-kk">Tgl Bayar KK</th><th class="th-kk">Aksi</th></tr></thead><tbody id="tbodyKK"></tbody></table>
+  </div>
+</div>
+
+<div id="modalBayar" class="modal"><div class="modal-content">
+  <h4 id="judulModal" style="margin-top:0">Pembayaran</h4>
+  <input type="hidden" id="bayarIndex"><input type="hidden" id="bayarTipe">
+  <label>Nama</label><input type="text" id="bayarNama" readonly>
+  <label>Jumlah Bayar</label><input type="number" id="bayarJumlah">
+  <label>Tanggal Bayar</label><input type="date" id="bayarTanggal">
+  <div style="display:flex;gap:10px;margin-top:12px"><button id="btnSimpan" class="btn" style="flex:1;padding:11px" onclick="simpanBayar()">Simpan</button><button class="btn" style="flex:1;background:#64748b;padding:11px" onclick="tutupModal()">Batal</button></div>
+</div></div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",databaseURL:"https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"restopro2026-60038"};
+firebase.initializeApp(firebaseConfig);const db=firebase.database();
+let dataList=[];const PATH="STEVEN";let tabAktif='KL';
+function tglIndo(t){if(!t||t=='-')return'-';let b=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];let p=t.split('-');if(p.length!=3)return t;return`${p[2]} ${b[parseInt(p[1])-1]} ${p[0]}`;}
+function switchTab(t){tabAktif=t;document.getElementById("btnKL").classList.toggle("active",t==='KL');document.getElementById("btnKK").classList.toggle("active",t==='KK');document.getElementById("wrapKL").classList.toggle("hidden",t!=='KL');document.getElementById("wrapKK").classList.toggle("hidden",t!=='KK');filterData();}
+
+db.ref(PATH+"/STEVEN_dataWarga").on("value",snap=>{let o=snap.val()||{};dataList=Array.isArray(o)?o.filter(x=>x):Object.values(o).filter(x=>x);filterData();});
+
+function filterData(){
+  let key=document.getElementById("searchKK").value.toLowerCase().trim();
+  let statusF=document.getElementById("filterStatus").value;
+  let tbKL=document.getElementById("tbodyKL");let tbKK=document.getElementById("tbodyKK");
+  tbKL.innerHTML="";tbKK.innerHTML="";
+  
+  dataList.forEach((d,idx)=>{
+    if(!d)return;
+    let kk=(d.no_kk||'').toString().toLowerCase();let nama=(d.nama||'').toLowerCase();
+    if(key&&!kk.includes(key)&&!nama.includes(key))return;
+
+    // DATA KL
+    let tarifLing=parseInt(d.pangkal_lingkungan||d.iuran_pangkal_lingkungan||150000);
+    let rLing=d.riwayat_pangkal_lingkungan||{};let isLingLunas=rLing.status==="Lunas";
+    // DATA KK
+    let tarifMati=parseInt(d.pangkal_kematian||d.iuran_pangkal_kematian||50000);
+    let rMati=d.riwayat_pangkal_kematian||{};let isMatiLunas=rMati.status==="Lunas";
+
+    // FILTER UNTUK TAB AKTIF
+    if(tabAktif==='KL'){
+      if(statusF==="lunas"&&!isLingLunas)return;if(statusF==="belum"&&isLingLunas)return;
+    } else {
+      if(statusF==="lunas"&&!isMatiLunas)return;if(statusF==="belum"&&isMatiLunas)return;
+    }
+
+    let nomLing=isLingLunas?`<span class="nominal-lunas">Rp ${tarifLing.toLocaleString('id-ID')}</span>`:`<span class="nominal-belum">Rp ${tarifLing.toLocaleString('id-ID')}</span>`;
+    let statLing=isLingLunas?`<span class="badge-lunas">LUNAS</span>`:`<span class="badge-belum">BELUM</span>`;
+    let tglLing=isLingLunas?tglIndo(rLing.tanggal):'-';
+    let aksiLing=isLingLunas?`<button class="btn btn-batal" onclick="batalPangkal(${idx},'lingkungan')">Batal KL</button> <button class="btn btn-kl" onclick="cetakKwitansi(${idx},'lingkungan')">Kwitansi KL</button>`:`<button class="btn btn-bayar" onclick="bukaModal(${idx},'lingkungan',${tarifLing})">Bayar KL</button>`;
+    
+    let nomMati=isMatiLunas?`<span class="nominal-lunas">Rp ${tarifMati.toLocaleString('id-ID')}</span>`:`<span class="nominal-belum">Rp ${tarifMati.toLocaleString('id-ID')}</span>`;
+    let statMati=isMatiLunas?`<span class="badge-lunas">LUNAS</span>`:`<span class="badge-belum">BELUM</span>`;
+    let tglMati=isMatiLunas?tglIndo(rMati.tanggal):'-';
+    let aksiMati=isMatiLunas?`<button class="btn btn-batal" onclick="batalPangkal(${idx},'kematian')">Batal KK</button> <button class="btn btn-kk" onclick="cetakKwitansi(${idx},'kematian')">Kwitansi KK</button>`:`<button class="btn btn-bayar" onclick="bukaModal(${idx},'kematian',${tarifMati})">Bayar KK</button>`;
+
+    tbKL.innerHTML+=`<tr><td>${idx+1}</td><td><b>${d.no_kk||'-'}</b></td><td style="text-align:left;font-weight:600">${d.nama||'-'}</td><td>${d.lingkungan_utama||'-'}</td><td>${nomLing}</td><td>${statLing}</td><td>${tglLing}</td><td>${aksiLing}</td></tr>`;
+    tbKK.innerHTML+=`<tr><td>${idx+1}</td><td><b>${d.no_kk||'-'}</b></td><td style="text-align:left;font-weight:600">${d.nama||'-'}</td><td>${d.lingkungan_utama||'-'}</td><td>${nomMati}</td><td>${statMati}</td><td>${tglMati}</td><td>${aksiMati}</td></tr>`;
+  });
+}
+
+function bukaModal(idx,tipe,tarif){
+  document.getElementById("bayarIndex").value=idx;document.getElementById("bayarTipe").value=tipe;
+  document.getElementById("bayarNama").value=dataList[idx].nama;document.getElementById("bayarJumlah").value=tarif;
+  document.getElementById("bayarTanggal").valueAsDate=new Date();
+  let isKL=tipe==='lingkungan';
+  document.getElementById("judulModal").innerText=isKL?"Bayar Pangkal Lingkungan (KL)":"Bayar Pangkal Kematian (KK)";
+  document.getElementById("judulModal").style.color=isKL?"#059669":"#0284c7";
+  document.getElementById("btnSimpan").style.background=isKL?"#10b981":"#0ea5e9";
+  document.getElementById("btnSimpan").innerText=isKL?"Simpan KL":"Simpan KK";
+  document.getElementById("modalBayar").style.display="flex";
+}
+function tutupModal(){document.getElementById("modalBayar").style.display="none";}
+function simpanBayar(){
+  let idx=document.getElementById("bayarIndex").value;let tipe=document.getElementById("bayarTipe").value;
+  let j=document.getElementById("bayarJumlah").value;let t=document.getElementById("bayarTanggal").value;
+  let field=tipe==='lingkungan'?'riwayat_pangkal_lingkungan':'riwayat_pangkal_kematian';
+  dataList[idx][field]={jumlah:j,tanggal:t,status:"Lunas"};
+  db.ref(PATH+"/STEVEN_dataWarga").set(dataList).then(()=>{tutupModal();filterData();});
+}
+function batalPangkal(idx,tipe){
+  if(!confirm("Batalkan "+tipe+"?"))return;
+  let field=tipe==='lingkungan'?'riwayat_pangkal_lingkungan':'riwayat_pangkal_kematian';
+  delete dataList[idx][field];db.ref(PATH+"/STEVEN_dataWarga").set(dataList).then(()=>filterData());
+}
+function cetakKwitansi(idx,tipe){
+  let d=dataList[idx];let field=tipe==='lingkungan'?'riwayat_pangkal_lingkungan':'riwayat_pangkal_kematian';let b=d[field];
+  const{jsPDF}=window.jspdf;let doc=new jsPDF();
+  let isKL=tipe==='lingkungan';
+  doc.setFillColor(isKL?16:14,isKL?185:165,isKL?129:233);doc.rect(0,0,210,32,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(18);doc.setFont("helvetica","bold");
+  doc.text(isKL?"KWITANSI LINGKUNGAN - KL":"KWITANSI KEMATIAN - KK",105,16,{align:"center"});
+  doc.setFontSize(11);doc.setFont("helvetica","normal");
+  doc.text(isKL?"Pangkal Lingkungan (KL) - 1x Bayar":"Pangkal Kematian (KK) - 1x Bayar",105,23,{align:"center"});
+  doc.setTextColor(0,0,0);doc.setFontSize(11);
+  doc.text(`No: KW-${isKL?'KL':'KK'}-${d.no_kk}`,20,42);doc.text(`Tgl: ${tglIndo(b.tanggal)}`,20,48);
+  doc.text(`Nama: ${d.nama} | NO_KK: ${d.no_kk}`,20,60);
+  doc.setFillColor(isKL?220:224,isKL?252:242,isKL?231:254);doc.rect(20,68,170,18,'F');
+  doc.setFont("helvetica","bold");doc.setFontSize(13);
+  doc.text(`Jumlah ${isKL?'KL':'KK'}: Rp ${parseInt(b.jumlah).toLocaleString('id-ID')} - LUNAS`,25,79);
+  doc.save(`Kwitansi_${isKL?'KL':'KK'}_${d.nama}.pdf`);
+}
+</script>
+</body>
+</html>

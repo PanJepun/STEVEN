@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard - STEVEN Fix Slider</title>
+<style>
+*{box-sizing:border-box}body{font-family:'Segoe UI',Arial;margin:0;padding:20px;background:#f1f5f9}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:1100px;margin:20px auto}
+.card h2{margin:0 0 12px 0;color:#1e293b;border-bottom:2px solid #f59e0b;padding-bottom:8px;font-size:16px}
+select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="card">
+<h2>▦ Slider Dokumentasi Aktivitas</h2>
+<label style="font-size:12px;font-weight:700">Pilih Kegiatan:</label>
+<select id="pilihAktivitas" onchange="loadSliderAktivitas()"><option value="">-- Pilih Kegiatan --</option></select>
+
+<div id="sliderContainer" style="display:none;position:relative;background:#0f172a;border-radius:12px;overflow:hidden;height:450px;margin-top:12px">
+  <div id="sliderTrack" style="display:flex;transition:transform 0.5s ease;height:100%"></div>
+  <button onclick="slidePrev()" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.9);color:black;border:none;width:38px;height:38px;border-radius:50%;cursor:pointer;font-weight:bold">‹</button>
+  <button onclick="slideNext()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.9);color:black;border:none;width:38px;height:38px;border-radius:50%;cursor:pointer;font-weight:bold">›</button>
+  <div id="sliderInfo" style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.9));color:white;padding:14px;font-size:12px"></div>
+  <div id="sliderDots" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:7px"></div>
+</div>
+<div id="sliderEmpty" style="text-align:center;padding:25px;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:10px;margin-top:10px">Pilih kegiatan dulu Beb</div>
+</div>
+
+<script>
+var firebaseConfig={apiKey:"AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",authDomain:"restopro2026-60038.firebaseapp.com",databaseURL:"https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"restopro2026-60038"};
+firebase.initializeApp(firebaseConfig);
+var db=firebase.database();
+var PATH="STEVEN";
+var listKegiatanSlider=[];var currentSlide=0;var slideInterval=null;
+
+db.ref(PATH+"/STEVEN_aktivitas").on("value",function(s){
+  var val=s.val();
+  if(!val) listKegiatanSlider=[];
+  else if(Array.isArray(val)) listKegiatanSlider=val.filter(function(x){return x;});
+  else listKegiatanSlider=Object.values(val);
+  var select=document.getElementById("pilihAktivitas");
+  var save=select.value;
+  select.innerHTML='<option value="">-- Pilih Kegiatan --</option>';
+  listKegiatanSlider.forEach(function(d,i){
+    if(!d) return;
+    var opt=document.createElement("option");
+    opt.value=i;
+    opt.textContent=(d.tanggal||"")+" - "+(d.nama||"")+" ("+((d.fotoDok||[]).length)+" foto)";
+    select.appendChild(opt);
+  });
+  if(save) select.value=save;
+  // Auto load kalau cuma 1 kegiatan kayak punya kamu Beb
+  if(listKegiatanSlider.length===1){select.value=0;loadSliderAktivitas();}
+});
+
+function loadSliderAktivitas(){
+  var idx=document.getElementById("pilihAktivitas").value;
+  var container=document.getElementById("sliderContainer");
+  var empty=document.getElementById("sliderEmpty");
+  var track=document.getElementById("sliderTrack");
+  var dots=document.getElementById("sliderDots");
+  var info=document.getElementById("sliderInfo");
+  if(idx===""){container.style.display="none";empty.style.display="block";clearInterval(slideInterval);return;}
+  var data=listKegiatanSlider[idx];
+  var fotos=data.fotoDok||[];
+  if(fotos.length===0 &&!data.videoDok){container.style.display="none";empty.style.display="block";return;}
+  empty.style.display="none";container.style.display="block";track.innerHTML="";dots.innerHTML="";currentSlide=0;
+
+  // BIKIN 2 FOTO PER SLIDE BEB
+  for(var g=0; g<fotos.length; g+=2){
+    var slide=document.createElement("div");
+    slide.style.cssText="min-width:100%;height:100%;display:flex;gap:8px;padding:8px;background:#0f172a";
+
+    var foto1=fotos[g];
+    var div1=document.createElement("div");
+    div1.style.cssText="flex:1;height:100%;display:flex;align-items:center;justify-content:center;background:#1e293b;border-radius:8px;overflow:hidden";
+    div1.innerHTML='<img src="'+foto1+'" style="width:100%;height:100%;object-fit:contain">';
+
+    var div2=document.createElement("div");
+    div2.style.cssText="flex:1;height:100%;display:flex;align-items:center;justify-content:center;background:#1e293b;border-radius:8px;overflow:hidden";
+    if(fotos[g+1]){
+      div2.innerHTML='<img src="'+fotos[g+1]+'" style="width:100%;height:100%;object-fit:contain">';
+    }else{
+      div2.innerHTML='<span style="color:#475569;font-size:12px">-</span>'; // kalau ganjil Beb
+    }
+
+    slide.appendChild(div1);
+    slide.appendChild(div2);
+    track.appendChild(slide);
+
+    var dot=document.createElement("div");
+    var slideIndex = g/2;
+    dot.style.cssText="width:9px;height:9px;border-radius:50%;background:"+(slideIndex===0?"white":"rgba(255,255,255,0.4)")+";cursor:pointer";
+    dot.onclick=(function(si){return function(){goSlide(si);}})(slideIndex);
+    dots.appendChild(dot);
+  }
+
+  info.innerHTML="<b>"+data.nama+"</b> | "+data.tanggal+" | "+data.lokasi+"<br><small>PJ: "+(data.pj||"-")+" | "+fotos.length+" foto (2 per slide)</small>";
+  clearInterval(slideInterval);
+  slideInterval=setInterval(function(){slideNext();},4000);
+  updateSlider();
+}
+function updateSlider(){
+  document.getElementById("sliderTrack").style.transform="translateX(-"+(currentSlide*100)+"%)";
+  var dots=document.getElementById("sliderDots").children;
+  for(var i=0;i<dots.length;i++){dots[i].style.background=i===currentSlide?"white":"rgba(255,255,255,0.4)";}
+}
+function goSlide(n){currentSlide=n;updateSlider();}
+function slideNext(){
+  var total=document.getElementById("sliderTrack").children.length;
+  if(total===0) return;
+  currentSlide=(currentSlide+1)%total; // ulang dari kiri Beb kalau udah mentok kanan
+  updateSlider();
+}
+function slidePrev(){
+  var total=document.getElementById("sliderTrack").children.length;
+  if(total===0) return;
+  currentSlide=(currentSlide-1+total)%total; // ulang ke kanan kalau mentok kiri Beb
+  updateSlider();
+}
+</script>
+</body>
+</html>

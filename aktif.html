@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Aktivitas & Kegiatan - STEVEN v3 Tambah Dok</title>
+<style>
+*{box-sizing:border-box}body{font-family:'Segoe UI',Arial;margin:0;padding:20px;background:#f1f5f9}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:1200px;margin:auto}
+.card h2{margin:0 0 15px 0;color:#1e293b;border-bottom:2px solid #3b82f6;padding-bottom:10px;font-size:20px}
+.btn-tambah{background:#2b7fb8;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
+.search{width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px;margin:12px 0;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+th{background:#233446;color:white;padding:10px 8px;text-align:left}
+td{border:1px solid #e2e8f0;padding:8px;vertical-align:top;background:white}
+tr:hover td{background:#f8fafc}
+.btn-edit{background:#2b7fb8;color:white;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600}
+.btn-hapus{background:#dc2626;color:white;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;margin-left:4px}
+.btn-dok{background:#10b981;color:white;border:none;padding:6px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;margin:2px}
+.btn-tambah-dok{background:#f59e0b;color:white;border:none;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;margin:2px}
+.badge-biaya{background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:20px;font-weight:700;font-size:11px}
+.modal-overlay{display:none;position:fixed;z-index:999;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.55);justify-content:center;align-items:center;padding:15px}
+.modal-box{background:white;width:95%;max-width:580px;border-radius:12px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto}
+.modal-box h3{margin:0 0 15px 0;font-size:18px;color:#1e293b}
+.modal-box input,.modal-box textarea{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;margin-bottom:10px;font-family:inherit}
+.modal-box textarea{min-height:60px;resize:vertical}
+.modal-box label{font-size:11px;font-weight:700;margin:8px 0 4px 0;display:block;color:#475569}
+.btn-simpan{background:#3b9be0;color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600}
+.btn-batal{background:#6b7280;color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;margin-left:6px}
+.preview-grid{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.preview-grid img{width:60px;height:60px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0}
+.preview-grid video{width:100px;height:60px;border-radius:8px;background:black}
+.gallery{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.gallery img{width:120px;height:120px;object-fit:cover;border-radius:10px;border:3px solid #e2e8f0;cursor:pointer}
+.gallery video{width:200px;border-radius:10px;background:black}
+.modal-img{max-width:90%;max-height:90%;border-radius:12px;border:4px solid white}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="card">
+<h2>Aktivitas & Kegiatan Keluarga</h2>
+<button class="btn-tambah" onclick="bukaModal()">+ Tambah Kegiatan</button>
+<input type="text" id="searchKegiatan" class="search" placeholder="Cari kegiatan..." onkeyup="filterKegiatan()">
+<table id="tabelKegiatan">
+<thead><tr><th>Tanggal</th><th>Nama Kegiatan</th><th>Lokasi / PJ</th><th>Biaya Iuran</th><th>Dokumentasi</th><th>Aksi</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+
+<!-- MODAL FORM UTAMA -->
+<div id="modalKegiatan" class="modal-overlay">
+<div class="modal-box">
+<h3 id="judulModal">Tambah Kegiatan</h3>
+<label>Tanggal</label><input type="date" id="tglKegiatan">
+<label>Nama Kegiatan</label><input type="text" id="namaKegiatan" placeholder="Arisan Bulanan April">
+<label>Lokasi</label><input type="text" id="lokasiKegiatan" placeholder="Balai Banjar">
+<label>Penanggung Jawab</label><input type="text" id="pjKegiatan" placeholder="Ketua Lingkungan">
+<label>Catatan</label><textarea id="catatanKegiatan"></textarea>
+<label>Biaya Iuran Wajib Rp:</label><input type="number" id="biayaKegiatan" value="0">
+<hr style="margin:12px 0">
+<label>📸 Upload Foto Dokumentasi</label><input type="file" id="fotoDok" accept="image/*" multiple>
+<div id="previewFoto" class="preview-grid"></div>
+<label>🎥 Upload Video Dokumentasi</label><input type="file" id="videoDok" accept="video/*">
+<div id="previewVideo" class="preview-grid"></div>
+<div style="margin-top:14px"><button class="btn-simpan" onclick="simpanKegiatan()">Simpan</button><button class="btn-batal" onclick="tutupModal()">Batal</button></div>
+</div>
+</div>
+
+<!-- MODAL TAMBAH DOK SAJA - INI YANG BARU BEB -->
+<div id="modalTambahDok" class="modal-overlay" style="z-index:998">
+<div class="modal-box" style="max-width:450px">
+<h3>Tambah Dokumentasi</h3>
+<p id="judulTambahDok" style="font-size:12px;color:#64748b;margin:0 0 10px 0"></p>
+<label>📸 Tambah Foto (bisa banyak)</label><input type="file" id="fotoTambah" accept="image/*" multiple>
+<div id="previewFotoTambah" class="preview-grid"></div>
+<label>🎥 Tambah / Ganti Video</label><input type="file" id="videoTambah" accept="video/*">
+<div id="previewVideoTambah" class="preview-grid"></div>
+<div style="margin-top:14px"><button class="btn-simpan" style="background:#f59e0b" onclick="simpanTambahDok()">+ Tambahkan</button><button class="btn-batal" onclick="tutupTambahDok()">Batal</button></div>
+</div>
+</div>
+
+<!-- MODAL GALLERY -->
+<div id="modalGallery" class="modal-overlay" style="z-index:1000;background:rgba(0,0,0,0.85)">
+<span style="position:absolute;top:20px;right:30px;color:white;font-size:30px;cursor:pointer" onclick="document.getElementById('modalGallery').style.display='none'">&times;</span>
+<div id="galleryContent" style="max-width:90%;max-height:85vh;overflow:auto;background:white;padding:15px;border-radius:12px"></div>
+</div>
+<div id="modalFotoBesar" class="modal-overlay" style="z-index:1001"><span style="position:absolute;top:20px;right:30px;color:white;font-size:30px;cursor:pointer" onclick="this.parentElement.style.display='none'">&times;</span><img id="fotoBesar" class="modal-img"></div>
+
+<script>
+var firebaseConfig={apiKey:"AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",authDomain:"restopro2026-60038.firebaseapp.com",databaseURL:"https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"restopro2026-60038"};
+var app=firebase.initializeApp(firebaseConfig);var db=firebase.database();
+var PATH="STEVEN";var listKegiatan=[];var filteredKegiatan=[];var editIndexKegiatan=-1;
+var tempFoto=[];var tempVideo="";var tempFotoTambah=[];var tempVideoTambah="";var indexTambahDok=-1;
+
+db.ref(PATH+"/STEVEN_aktivitas").on("value",function(s){
+  var val=s.val();if(!val) listKegiatan=[];else if(Array.isArray(val)) listKegiatan=val.filter(function(x){return x;});else listKegiatan=Object.values(val).filter(function(x){return x;});filterKegiatan();
+});
+document.getElementById("fotoDok").addEventListener("change",function(){
+  tempFoto=[];var files=this.files;var preview=document.getElementById("previewFoto");preview.innerHTML="";
+  for(var i=0;i<files.length;i++){(function(file){var reader=new FileReader();reader.onload=function(e){tempFoto.push(e.target.result);var img=document.createElement("img");img.src=e.target.result;preview.appendChild(img);};reader.readAsDataURL(file);})(files[i]);}
+});
+document.getElementById("videoDok").addEventListener("change",function(){
+  var file=this.files[0];if(!file) return;var reader=new FileReader();reader.onload=function(e){tempVideo=e.target.result;document.getElementById("previewVideo").innerHTML='<video src="'+e.target.result+'" controls></video>';};reader.readAsDataURL(file);
+});
+// UNTUK TAMBAH DOK BEB
+document.getElementById("fotoTambah").addEventListener("change",function(){
+  tempFotoTambah=[];var files=this.files;var preview=document.getElementById("previewFotoTambah");preview.innerHTML="";
+  for(var i=0;i<files.length;i++){(function(file){var reader=new FileReader();reader.onload=function(e){tempFotoTambah.push(e.target.result);var img=document.createElement("img");img.src=e.target.result;preview.appendChild(img);};reader.readAsDataURL(file);})(files[i]);}
+});
+document.getElementById("videoTambah").addEventListener("change",function(){
+  var file=this.files[0];if(!file) return;var reader=new FileReader();reader.onload=function(e){tempVideoTambah=e.target.result;document.getElementById("previewVideoTambah").innerHTML='<video src="'+e.target.result+'" controls></video>';};reader.readAsDataURL(file);
+});
+
+function bukaModal(index){
+  document.getElementById("modalKegiatan").style.display="flex";tempFoto=[];tempVideo="";document.getElementById("previewFoto").innerHTML="";document.getElementById("previewVideo").innerHTML="";
+  if(typeof index==="number"){editIndexKegiatan=index;var d=listKegiatan[index];document.getElementById("judulModal").innerText="Edit Kegiatan";document.getElementById("tglKegiatan").value=d.tanggal||"";document.getElementById("namaKegiatan").value=d.nama||"";document.getElementById("lokasiKegiatan").value=d.lokasi||"";document.getElementById("pjKegiatan").value=d.pj||"";document.getElementById("catatanKegiatan").value=d.catatan||"";document.getElementById("biayaKegiatan").value=d.biaya||0;tempFoto=d.fotoDok||[];tempVideo=d.videoDok||"";if(tempFoto.length){var p=document.getElementById("previewFoto");tempFoto.forEach(function(f){var img=document.createElement("img");img.src=f;p.appendChild(img);});}if(tempVideo){document.getElementById("previewVideo").innerHTML='<video src="'+tempVideo+'" controls></video>';}}
+  else{editIndexKegiatan=-1;document.getElementById("judulModal").innerText="Tambah Kegiatan";document.getElementById("tglKegiatan").valueAsDate=new Date();document.getElementById("namaKegiatan").value="";document.getElementById("lokasiKegiatan").value="";document.getElementById("pjKegiatan").value="";document.getElementById("catatanKegiatan").value="";document.getElementById("biayaKegiatan").value=0;}
+}
+function tutupModal(){document.getElementById("modalKegiatan").style.display="none";editIndexKegiatan=-1;}
+function bukaTambahDok(idx){
+  indexTambahDok=idx;tempFotoTambah=[];tempVideoTambah="";document.getElementById("previewFotoTambah").innerHTML="";document.getElementById("previewVideoTambah").innerHTML="";document.getElementById("fotoTambah").value="";document.getElementById("videoTambah").value="";
+  var d=listKegiatan[idx];document.getElementById("judulTambahDok").innerText=d.nama+" - "+d.tanggal+" (Sudah ada "+(d.fotoDok||[]).length+" foto)";
+  document.getElementById("modalTambahDok").style.display="flex";
+}
+function tutupTambahDok(){document.getElementById("modalTambahDok").style.display="none";indexTambahDok=-1;}
+function simpanTambahDok(){
+  if(indexTambahDok<0) return;if(tempFotoTambah.length===0 &&!tempVideoTambah){alert("Pilih foto atau video dulu Beb!");return;}
+  var d=listKegiatan[indexTambahDok];
+  if(!d.fotoDok) d.fotoDok=[];
+  tempFotoTambah.forEach(function(f){d.fotoDok.push(f);});
+  if(tempVideoTambah) d.videoDok=tempVideoTambah;
+  db.ref(PATH+"/STEVEN_aktivitas").set(listKegiatan).then(function(){tutupTambahDok();filterKegiatan();alert("Berhasil tambah "+tempFotoTambah.length+" foto Beb!");});
+}
+function simpanKegiatan(){
+  var data={tanggal:document.getElementById("tglKegiatan").value,nama:document.getElementById("namaKegiatan").value.trim(),lokasi:document.getElementById("lokasiKegiatan").value.trim(),pj:document.getElementById("pjKegiatan").value.trim(),catatan:document.getElementById("catatanKegiatan").value.trim(),biaya:parseInt(document.getElementById("biayaKegiatan").value)||0,fotoDok:tempFoto,videoDok:tempVideo,createdAt:new Date().toISOString()};
+  if(!data.tanggal||!data.nama){alert("Tanggal & Nama wajib isi Beb!");return;}
+  if(editIndexKegiatan>=0){listKegiatan[editIndexKegiatan]=Object.assign({},listKegiatan[editIndexKegiatan],data);}else{listKegiatan.push(data);}
+  db.ref(PATH+"/STEVEN_aktivitas").set(listKegiatan).then(function(){tutupModal();filterKegiatan();});
+}
+function filterKegiatan(){var key=document.getElementById("searchKegiatan").value.toLowerCase();filteredKegiatan=listKegiatan.filter(function(d){return (d.nama||"").toLowerCase().indexOf(key)>=0;});renderKegiatan();}
+function renderKegiatan(){
+  var tbody=document.querySelector("#tabelKegiatan tbody");tbody.innerHTML="";
+  var dataShow=filteredKegiatan.length>0||document.getElementById("searchKegiatan").value?filteredKegiatan:listKegiatan;
+  dataShow.forEach(function(d){
+    var idx=listKegiatan.indexOf(d);var jmlFoto=(d.fotoDok||[]).length;var adaVideo=d.videoDok?"1":"0";
+    var dokHtml='<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">';
+    if(jmlFoto>0) dokHtml+='<button class="btn-dok" onclick="lihatDok('+idx+')">📸 Foto ('+jmlFoto+')</button>';
+    else dokHtml+='<button class="btn-dok" style="background:#94a3b8" onclick="lihatDok('+idx+')">📸 Foto (0)</button>';
+    // INI TOMBOL TAMBAH DISAMPING DOKUMENTASI BEB - REQUEST KAMU
+    dokHtml+='<button class="btn-tambah-dok" onclick="bukaTambahDok('+idx+')">+ Tambah</button>';
+    if(adaVideo==="1") dokHtml+='<button class="btn-dok" style="background:#8b5cf6;margin-top:2px" onclick="lihatDok('+idx+')">🎥 Video</button>';
+    dokHtml+='</div>';
+    var tr=document.createElement("tr");
+    tr.innerHTML='<td>'+d.tanggal+'</td><td><b>'+d.nama+'</b><br><small style="color:#64748b">'+(d.catatan||"")+'</small></td><td>'+d.lokasi+'<br><small>PJ: '+(d.pj||"-")+'</small></td><td><span class="badge-biaya">Rp '+(d.biaya||0).toLocaleString("id-ID")+'</span></td><td>'+dokHtml+'</td><td><button class="btn-edit" onclick="bukaModal('+idx+')">Edit</button><button class="btn-hapus" onclick="hapusKegiatan('+idx+')">Hapus</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+function lihatDok(idx){var d=listKegiatan[idx];var html='<h3 style="margin:0 0 10px 0">'+d.nama+' - '+d.tanggal+'</h3>';if(d.fotoDok&&d.fotoDok.length){html+='<h4>📸 Foto ('+d.fotoDok.length+')</h4><div class="gallery">';d.fotoDok.forEach(function(f){html+='<img src="'+f+'" onclick="bukaFotoBesar(\''+f+'\')">';});html+='</div>';}if(d.videoDok){html+='<h4 style="margin-top:15px">🎥 Video</h4><video src="'+d.videoDok+'" controls style="width:100%;max-width:500px;border-radius:10px;background:black"></video>';}if((!d.fotoDok||d.fotoDok.length===0)&&!d.videoDok) html+='<p>Belum ada dokumentasi Beb, klik + Tambah di tabel Beb!</p>';html+='<br><button class="btn-tambah-dok" style="margin-top:12px" onclick="document.getElementById(\'modalGallery\').style.display=\'none\';bukaTambahDok('+idx+')">+ Tambah Foto/Video Lagi</button>';document.getElementById("galleryContent").innerHTML=html;document.getElementById("modalGallery").style.display="flex";}
+function bukaFotoBesar(src){document.getElementById("fotoBesar").src=src;document.getElementById("modalFotoBesar").style.display="flex";}
+function hapusKegiatan(idx){if(confirm("Yakin hapus "+listKegiatan[idx].nama+" Beb?")){listKegiatan.splice(idx,1);db.ref(PATH+"/STEVEN_aktivitas").set(listKegiatan);}}
+document.getElementById("modalKegiatan").addEventListener("click",function(e){if(e.target===this) tutupModal();});
+document.getElementById("modalTambahDok").addEventListener("click",function(e){if(e.target===this) tutupTambahDok();});
+document.getElementById("modalGallery").addEventListener("click",function(e){if(e.target===this) this.style.display="none";});
+</script>
+</body>
+</html>
