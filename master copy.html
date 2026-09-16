@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Data Warga STEVEN - v5.2</title>
+<style>
+    * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial;
+    margin:0; padding:15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height:100vh;
+  }
+.wrapper { display:flex; gap:15px; height:calc(100vh - 30px); }
+.form-panel,.list-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  padding:15px;
+  border-radius:16px;
+  box-shadow:0 8px 32px rgba(31, 38, 135, 0.37);
+}
+.form-panel { width:45%; overflow-y:auto; }
+.list-panel { width:55%; display:flex; flex-direction:column; }
+.form-panel h3,.list-panel h3 {
+  margin:0 0 12px 0; color:#4c1d95; font-size:16px; text-align:center;
+  border-bottom:2px solid #8b5cf6; padding-bottom:8px; font-weight:700;
+}
+.form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.full { grid-column: span 2; }
+  label { font-size:11px; font-weight:600; display:block; margin-bottom:4px; color:#4b5563; }
+  input, select {
+    width:100%; padding:6px 8px; font-size:11px;
+    border:1px solid #d1d5db; border-radius:6px; height:28px;
+    background: #fff;
+  }
+  input:disabled, select:disabled { background:#e5e7eb; cursor:not-allowed; }
+  input:focus, select:focus {
+    border-color:#8b5cf6; outline:none;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
+
+.dropdown-group { display:flex; gap:5px; align-items:center; }
+.dropdown-group select { flex:1; }
+.btn-plus {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color:white; border:none; border-radius:6px; width:28px; height:28px; cursor:pointer; font-weight:bold; font-size:14px;
+}
+.btn-del {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color:white; border:none; border-radius:6px; width:28px; height:28px; cursor:pointer; font-weight:bold; font-size:14px;
+}
+.btn-plus:disabled,.btn-del:disabled { background:#9ca3af; cursor:not-allowed; }
+
+.preview-img {
+  width:60px; height:60px; border-radius:50%; object-fit:cover;
+  border:3px solid #8b5cf6; margin:8px auto; display:block;
+}
+
+.btn-wrap { display:flex; gap:8px; margin-top:12px; }
+.btn {
+  flex:1; padding:10px; background: linear-gradient(135deg, #10b981, #059669);
+  color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px;
+}
+.btn:disabled { background:#9ca3af; cursor:not-allowed; }
+.btn-update { background: linear-gradient(135deg, #f59e0b, #d97706); display:none; }
+.btn-reset { background: linear-gradient(135deg, #64748b, #475569); }
+
+.search-box { display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+.table-wrap { flex:1; overflow:auto; border-radius:10px; }
+  table { width:100%; border-collapse:collapse; font-size:10px; background:white; border-radius:10px; overflow:hidden; }
+  th {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color:white; padding:7px; position:sticky; top:0; font-weight:600;
+  }
+  td { border-bottom:1px solid #f1f5f9; padding:5px; cursor:pointer; text-align:center; }
+.foto-tabel { width:32px; height:32px; border-radius:50%; object-fit:cover; cursor:pointer; border:2px solid #e5e7eb; }
+  tr:hover { background:#f5f3ff; }
+  tr.selected { background:#ddd6fe!important; }
+.btn-hapus {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color:white; border:none; border-radius:5px; padding:4px 7px;
+    font-size:10px; font-weight:bold; cursor:pointer;
+  }
+.modal { display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; }
+.modal img { max-width:90%; max-height:90%; border-radius:12px; border:4px solid white; }
+.modal span { position:absolute; top:20px; right:30px; color:white; font-size:30px; cursor:pointer; }
+
+/* USIA & HOBBY MULTI */
+.usaha-box { display:flex; gap:5px; }
+.usaha-box input[readonly] { background:#f3f4f6; font-weight:bold; color:#4c1d95; }
+.hobby-wrap { border:1px solid #d1d5db; border-radius:6px; padding:5px; background:white; }
+.hobby-list { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; }
+.hobby-tag { background:#8b5cf6; color:white; padding:3px 8px; border-radius:12px; font-size:10px; display:flex; align-items:center; gap:4px; }
+.hobby-tag span { cursor:pointer; font-weight:bold; }
+.warning { color:#ef4444; font-size:10px; font-weight:bold; margin-top:3px; }
+.info { color:#10b981; font-size:10px; font-weight:bold; margin-top:3px; }
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div class="wrapper">
+  <div class="form-panel">
+    <h3>FORM DATA ENTRY - STEVEN v5.2</h3>
+    <form id="formWarga">
+      <input type="hidden" id="editIndex" value="-1">
+      <input type="hidden" id="fotoBase64" name="foto">
+      <input type="hidden" id="hobbyData" name="hobby">
+      <div class="form-grid">
+        <div><label>Tgl Daftar</label><input type="date" name="tgl" required></div>
+        <div>
+          <label>NO_KK</label>
+          <input type="text" name="no_kk" id="no_kk" maxlength="16" placeholder="Ketik lalu TAB/klik luar">
+          <div class="warning" id="warningKK"></div>
+          <div class="info" id="infoKK"></div>
+        </div>
+        <div><label>No. KTP</label><input type="text" name="nik" maxlength="16"></div>
+        <div><label>Nama</label><input type="text" name="nama" required></div>
+        
+        <div>
+          <label>Status Keluarga</label>
+          <div class="dropdown-group">
+            <select name="status_keluarga" id="selectStatusKeluarga"></select>
+            <button type="button" class="btn-plus" id="btnPlusStatus" onclick="showAdd('status_keluarga')">+</button>
+            <button type="button" class="btn-del" id="btnDelStatus" onclick="showDel('status_keluarga')">x</button>
+          </div>
+        </div>
+        <div class="full"><label>Alamat</label><input type="text" name="alamat"></div>
+
+        <!-- FIX LABEL LINGKUNGAN UTAMA -->
+        <div>
+          <label>Status Alamat</label>
+          <div class="dropdown-group">
+            <select name="status_alamat" id="selectAlamat"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('alamat')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('alamat')">x</button>
+          </div>
+        </div>
+        <div>
+          <label>Lingkungan</label>
+          <input type="text" name="lingkungan_utama" placeholder="Contoh: Banjar Tengah">
+        </div>
+
+        <div><label>KGB</label><input type="text" name="sub_lingkungan"></div>
+        <div><label>Tempat Lahir</label><input type="text" name="tempat"></div>
+        <div>
+          <label>Tgl Lahir</label>
+          <div class="usaha-box">
+            <input type="date" name="tgllahir" id="tgllahir">
+            <input type="text" id="usia" placeholder="Usia" readonly>
+          </div>
+        </div>
+        <div><label>Jenis Kelamin</label><select name="jk"><option>Laki-Laki</option><option>Perempuan</option></select></div>
+        <div>
+          <label>Gol Darah</label>
+          <div class="dropdown-group">
+            <select name="gol" id="selectGol"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('gol')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('gol')">x</button>
+          </div>
+        </div>
+        <div class="full"><label>PEKERJAAN</label><input type="text" name="pekerjaan"></div>
+
+        <div class="full">
+          <label>KEAHLIAN / HOBBY</label>
+          <div class="hobby-wrap">
+            <div class="hobby-list" id="hobbyList"></div>
+            <div class="dropdown-group">
+              <select id="selectHobby"></select>
+              <button type="button" class="btn-plus" onclick="showAdd('hobby')">+</button>
+              <button type="button" class="btn-del" onclick="showDel('hobby')">x</button>
+            </div>
+            <input type="text" id="hobbyTambahan" placeholder="Sebutkan..." style="margin-top:5px; display:none;">
+          </div>
+        </div>
+
+        <div><label>UANG PENDAFTARAN/PANGKAL PAHA</label><input type="number" name="uang_pendaftaran"></div>
+        <div>
+          <label>Status</label>
+          <div class="dropdown-group">
+            <select name="status" id="selectStatus"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('status')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('status')">x</button>
+          </div>
+        </div>
+        <div><label>No. HP</label><input type="text" name="hp"></div>
+        <div><label>Iuran Tahunan</label><input type="number" name="iuran_bulanan"></div>
+        <div><label>Iuran Kematian</label><input type="number" name="iuran_kematian"></div>
+        <div><label>Kelompok</label><input type="text" name="kelompok"></div>
+        <div>
+          <label>Status Rumah</label>
+          <div class="dropdown-group">
+            <select name="status_rumah" id="selectRumah"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('rumah')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('rumah')">x</button>
+          </div>
+        </div>
+        <div class="full" style="text-align:center;">
+          <label>Foto</label>
+          <input type="file" id="inputFoto" accept="image/*">
+          <img id="preview" class="preview-img" src="https://via.placeholder.com/60/CCCCCC/FFFFFF?text=Foto">
+        </div>
+      </div>
+      <div class="btn-wrap">
+        <button type="submit" id="btnSimpan" class="btn">+ Simpan</button>
+        <button type="button" id="btnUpdate" class="btn btn-update">Update</button>
+        <button type="button" id="btnReset" class="btn btn-reset">Reset</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="list-panel">
+    <h3>DATA YANG SUDAH MASUK - Klik untuk Edit</h3>
+    <div class="search-box">
+      <input type="text" id="searchNoKK" placeholder="Cari NO_KK..." onkeyup="filterData()">
+      <input type="text" id="searchNama" placeholder="Cari Nama..." onkeyup="filterData()">
+      <input type="text" id="searchLingkungan" placeholder="Cari Lingkungan..." onkeyup="filterData()">
+      <input type="text" id="searchKelompok" placeholder="Cari Kelompok..." onkeyup="filterData()">
+      <input type="text" id="searchSub" placeholder="Cari Sub..." onkeyup="filterData()">
+    </div>
+    <div class="table-wrap">
+      <table id="tabelData">
+        <thead><tr><th>Foto</th><th>NO_KK</th><th>Nama</th><th>Status Klg</th><th>NIK</th><th>Lingk.</th><th>Sub</th><th>Kelompok</th><th>JK</th><th>HP</th><th>Aksi</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="modalFoto" class="modal">
+  <span onclick="document.getElementById('modalFoto').style.display='none'">&times;</span>
+  <img id="modalImg">
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",
+  authDomain: "restopro2026-60038.firebaseapp.com",
+  databaseURL: "https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "restopro2026-60038"
+};
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let dataList = [];
+let dataFiltered = [];
+let editIndex = -1;
+let selectedHobbies = [];
+let currentKK = "";
+let kodeData = {
+  gol:{"-":"-","A":"A","B":"B","AB":"AB","O":"O"},
+  status:{"Single":"Single","Menikah":"Menikah"},
+  rumah:{"Milik Sendiri":"Milik Sendiri"},
+  alamat:{"Tetap":"Tetap","Kontrak":"Kontrak"},
+  status_keluarga:{"Kepala Keluarga":"Kepala Keluarga","Istri":"Istri","Anak":"Anak"},
+  hobby:{"Menjahit":"Menjahit","Bangunan":"Bangunan","Kelistrikan":"Kelistrikan","Otomotif":"Otomotif","Bahasa Asing":"Bahasa Asing","Fotografi":"Fotografi","Tukang Kayu":"Tukang Kayu","Bela Diri":"Bela Diri","Sepak Bola":"Sepak Bola","Bulutangkis":"Bulutangkis","Yoga":"Yoga","Menyanyi":"Menyanyi","Musik":"Musik","Lain-lain":"Lain-lain"}
+};
+
+const PATH = "STEVEN";
+const form = document.getElementById("formWarga");
+const noKKInput = document.getElementById("no_kk");
+const selectStatusKeluarga = document.getElementById("selectStatusKeluarga");
+
+// CEK NO_KK SAAT LOST FOCUS
+noKKInput.addEventListener("blur", function(){
+  let no_kk = this.value.trim();
+  if(!no_kk) return;
+  currentKK = no_kk;
+
+  let anggotaKK = dataList.filter(d => d.no_kk === no_kk);
+
+  if(anggotaKK.length > 0){
+    document.getElementById("infoKK").innerText = `KK Ditemukan: ${anggotaKK.length} Anggota. Silahkan tambah anggota.`;
+    document.getElementById("warningKK").innerText = "";
+    selectStatusKeluarga.disabled = false;
+    document.getElementById("btnPlusStatus").disabled = false;
+    document.getElementById("btnDelStatus").disabled = false;
+    selectStatusKeluarga.value = "";
+  } else {
+    document.getElementById("warningKK").innerText = "KK Baru! Wajib isi sebagai Kepala Keluarga";
+    document.getElementById("infoKK").innerText = "";
+    selectStatusKeluarga.value = "Kepala Keluarga";
+    selectStatusKeluarga.disabled = true;
+    document.getElementById("btnPlusStatus").disabled = true;
+    document.getElementById("btnDelStatus").disabled = true;
+  }
+});
+
+selectStatusKeluarga.addEventListener("change", function(){
+  let status = this.value;
+  let anggotaKK = dataList.filter(d => d.no_kk === currentKK);
+  if(anggotaKK.length === 0 && status!== "Kepala Keluarga"){
+    alert("KK ini belum ada. Data pertama harus Kepala Keluarga!");
+    this.value = "Kepala Keluarga";
+  }
+});
+
+// ENTER PINDAH KOLOM
+form.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const inputs = Array.from(form.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled]), button:not([disabled])'));
+    const index = inputs.indexOf(document.activeElement);
+    if (index > -1 && index < inputs.length - 1) inputs[index + 1].focus();
+    else document.getElementById('btnSimpan').focus();
+  }
+});
+
+db.ref(PATH + "/STEVEN_dataWarga").on("value", (snapshot) => {
+  dataList = snapshot.val() || [];
+  filterData();
+});
+db.ref(PATH + "/STEVEN_kodeData").on("value", (snapshot) => {
+  let data = snapshot.val();
+  if(data){ kodeData = {...kodeData,...data}; }
+  renderAllSelect();
+});
+
+function saveDataWarga(){ db.ref(PATH + "/STEVEN_dataWarga").set(dataList); }
+function saveKodeData(){ db.ref(PATH + "/STEVEN_kodeData").set(kodeData); }
+
+function saveIuran(){
+  let iuranBulanan = dataList.map(d=>({no_kk:d.no_kk, nama:d.nama, iuran:d.iuran_bulanan}));
+  let iuranKematian = dataList.map(d=>({no_kk:d.no_kk, nama:d.nama, iuran:d.iuran_kematian}));
+  db.ref(PATH + "/STEVEN_iuran_bulanan").set(iuranBulanan);
+  db.ref(PATH + "/STEVEN_iuran_kematian").set(iuranKematian);
+}
+
+document.getElementById("inputFoto").addEventListener("change", function(){
+  let file = this.files[0];
+  if(file){
+    let reader = new FileReader();
+    reader.onload = e => { document.getElementById("preview").src = e.target.result; document.getElementById("fotoBase64").value = e.target.result; }
+    reader.readAsDataURL(file);
+  }
+});
+
+document.getElementById("tgllahir").addEventListener("change", function(){
+  if(!this.value) return;
+  let tgl = new Date(this.value);
+  let now = new Date();
+  let tahun = now.getFullYear() - tgl.getFullYear();
+  let bulan = now.getMonth() - tgl.getMonth();
+  let hari = now.getDate() - tgl.getDate();
+  if(hari < 0){ bulan--; hari += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+  if(bulan < 0){ tahun--; bulan += 12; }
+  document.getElementById("usia").value = `${tahun} Tahun ${bulan} Bulan ${hari} Hari`;
+});
+
+document.getElementById("selectHobby").addEventListener("change", function(){
+  let val = this.value;
+  if(val &&!selectedHobbies.find(h=>h.nama===val)){
+    if(["Bahasa Asing","Bela Diri","Musik","Lain-lain"].includes(val)){
+      document.getElementById("hobbyTambahan").style.display="block";
+      document.getElementById("hobbyTambahan").placeholder = "Sebutkan " + val;
+      return;
+    }
+    selectedHobbies.push({nama:val, detail:""});
+    renderHobby();
+    this.value="";
+  }
+});
+
+document.getElementById("hobbyTambahan").addEventListener("blur", function(){
+  let val = document.getElementById("selectHobby").value;
+  if(val && this.value){
+    selectedHobbies.push({nama:val, detail:this.value});
+    renderHobby();
+    this.value=""; this.style.display="none";
+    document.getElementById("selectHobby").value="";
+  }
+});
+
+function renderHobby(){
+  let wrap = document.getElementById("hobbyList");
+  wrap.innerHTML="";
+  selectedHobbies.forEach((h,i)=>{
+    wrap.innerHTML += `<div class="hobby-tag">${h.nama} ${h.detail?`(${h.detail})`:''} <span onclick="hapusHobby(${i})">x</span></div>`;
+  });
+  document.getElementById("hobbyData").value = JSON.stringify(selectedHobbies);
+}
+function hapusHobby(i){ selectedHobbies.splice(i,1); renderHobby(); }
+
+function renderAllSelect(){
+  renderSelect('gol'); renderSelect('status'); renderSelect('rumah'); renderSelect('alamat'); renderSelect('hobby'); renderSelect('status_keluarga');
+}
+function renderSelect(type){
+  let id = 'select' + type.split('_').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join('');
+  let select = document.getElementById(id);
+  if(!select) return;
+  let val = select.value;
+  select.innerHTML = "<option value=''>-Pilih-</option>";
+  for(let key in kodeData[type]){ select.innerHTML += `<option value="${key}">${kodeData[type][key]}</option>`; }
+  select.value = val;
+}
+function showAdd(type){
+  let val = prompt("Tambah data baru untuk " + type.toUpperCase().replace('_',' '));
+  if(val && val.trim() &&!kodeData[type][val.trim()]){
+    kodeData[type][val.trim()] = val.trim();
+    renderAllSelect();
+    saveKodeData();
+  }
+}
+function showDel(type){
+  let id = 'select' + type.split('_').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join('');
+  let val = document.getElementById(id).value;
+  if(val && confirm("Hapus: " + val + "?")){
+    delete kodeData[type][val];
+    renderAllSelect();
+    saveKodeData();
+  }
+}
+
+form.addEventListener("submit", function(e){
+  e.preventDefault();
+  let formData = new FormData(this);
+  let data = {};
+  formData.forEach((v,k)=> data[k]=v);
+  dataList.push(data);
+  saveDataWarga();
+  saveIuran();
+  filterData();
+  resetForm();
+});
+
+function filterData(){
+  let no_kk = document.getElementById('searchNoKK').value.toLowerCase();
+  let nama = document.getElementById('searchNama').value.toLowerCase();
+  let lingk = document.getElementById('searchLingkungan').value.toLowerCase();
+  let kel = document.getElementById('searchKelompok').value.toLowerCase();
+  let sub = document.getElementById('searchSub').value.toLowerCase();
+
+  dataFiltered = dataList.filter(d =>
+    (d.no_kk||'').toLowerCase().includes(no_kk) &&
+    (d.nama||'').toLowerCase().includes(nama) &&
+    (d.lingkungan_utama||'').toLowerCase().includes(lingk) &&
+    (d.kelompok||'').toLowerCase().includes(kel) &&
+    (d.sub_lingkungan||'').toLowerCase().includes(sub)
+  );
+  renderTable();
+}
+
+function renderTable(){
+  let tbody = document.querySelector("#tabelData tbody");
+  tbody.innerHTML = "";
+  let dataToShow = dataFiltered.length > 0? dataFiltered : dataList;
+  dataToShow.forEach((d)=>{
+    let foto = d.foto || "https://via.placeholder.com/32/CCCCCC/FFFFFF?text=?";
+    let indexAsli = dataList.indexOf(d);
+    let tr = document.createElement("tr");
+    tr.innerHTML = `<td><img class="foto-tabel" src="${foto}" ondblclick="showModal('${foto}')"></td>
+      <td><b>${d.no_kk || '-'}</b></td><td>${d.nama}</td><td>${d.status_keluarga || '-'}</td><td>${d.nik}</td><td>${d.lingkungan_utama || '-'}</td>
+      <td>${d.sub_lingkungan || '-'}</td><td>${d.kelompok || '-'}</td>
+      <td>${d.jk}</td><td>${d.hp}</td>
+      <td><button class="btn-hapus" onclick="hapusData(${indexAsli})">Hapus</button></td>`;
+    tr.onclick = (e) => { if(e.target.tagName!== 'BUTTON') loadToForm(indexAsli, tr); }
+    tbody.appendChild(tr);
+  });
+}
+
+function hapusData(index){
+  if(confirm("Yakin hapus: " + dataList[index].nama + "?")){
+    dataList.splice(index, 1);
+    saveDataWarga();
+    saveIuran();
+    filterData();
+    resetForm();
+  }
+}
+
+function showModal(src){
+  document.getElementById('modalImg').src = src;
+  document.getElementById('modalFoto').style.display = 'flex';
+}
+
+function loadToForm(index, row){
+  editIndex = index;
+  document.querySelectorAll("#tabelData tr").forEach(r=>r.classList.remove("selected"));
+  row.classList.add("selected");
+  let data = dataList[index];
+  selectedHobbies = data.hobby? JSON.parse(data.hobby) : [];
+  renderHobby();
+  for(let key in data){ if(form.elements[key]) form.elements[key].value = data[key]; }
+  document.getElementById("preview").src = data.foto || "https://via.placeholder.com/60/CCCCCC/FFFFFF?text=Foto";
+  if(data.tgllahir) document.getElementById("tgllahir").dispatchEvent(new Event('change'));
+  document.getElementById("btnSimpan").style.display = "none";
+  document.getElementById("btnUpdate").style.display = "block";
+  selectStatusKeluarga.disabled = false;
+  document.getElementById("btnPlusStatus").disabled = false;
+  document.getElementById("btnDelStatus").disabled = false;
+}
+
+document.getElementById("btnUpdate").onclick = function(){
+  let formData = new FormData(form);
+  let data = {};
+  formData.forEach((v,k)=> data[k]=v);
+  dataList[editIndex] = data;
+  saveDataWarga();
+  saveIuran();
+  filterData();
+  resetForm();
+}
+
+document.getElementById("btnReset").onclick = resetForm;
+function resetForm(){
+  form.reset();
+  selectedHobbies = []; renderHobby();
+  document.getElementById("preview").src = "https://via.placeholder.com/60/CCCCCC/FFFFFF?text=Foto";
+  document.getElementById("fotoBase64").value = "";
+  document.getElementById("usia").value = "";
+  document.getElementById("warningKK").innerText = "";
+  document.getElementById("infoKK").innerText = "";
+  editIndex = -1;
+  currentKK = "";
+  document.getElementById("btnSimpan").style.display = "block";
+  document.getElementById("btnUpdate").style.display = "none";
+  document.querySelectorAll("#tabelData tr").forEach(r=>r.classList.remove("selected"));
+  selectStatusKeluarga.disabled = false;
+  document.getElementById("btnPlusStatus").disabled = false;
+  document.getElementById("btnDelStatus").disabled = false;
+}
+
+renderAllSelect();
+</script>
+</body>
+</html>

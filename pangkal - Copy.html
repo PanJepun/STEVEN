@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Laporan Uang Pangkal - STEVEN</title>
+<style>
+  body{font-family:'Segoe UI',Arial;padding:15px;background:linear-gradient(135deg,#667eea,#764ba2);margin:0}
+ .wrapper{background:white;padding:15px;border-radius:16px;height:calc(100vh - 30px);display:flex;flex-direction:column}
+  h3{text-align:center;color:#4c1d95;border-bottom:2px solid #8b5cf6;padding-bottom:8px}
+ .top-bar{display:flex;gap:10px;margin-bottom:10px}
+ .top-bar input,.top-bar select{padding:8px;border-radius:6px;border:1px solid #ddd;flex:1}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:#8b5cf6;color:white;padding:8px;position:sticky;top:0}
+  td{border-bottom:1px solid #eee;padding:6px;text-align:center}
+ .lunas{color:green;font-weight:bold;background:#dcfce7;padding:3px 8px;border-radius:10px}
+ .belum{color:red;font-weight:bold;background:#ffe4e6;padding:3px 8px;border-radius:10px}
+ .btn{padding:5px 10px;border:none;border-radius:5px;color:white;cursor:pointer;font-size:10px;font-weight:bold}
+ .btn-lunas{background:#10b981}
+ .btn-belum{background:#ef4444}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrapper">
+  <h3>LAPORAN KHUSUS UANG PANGKAL (1X BAYAR) - STEVEN</h3>
+  <div class="top-bar">
+    <input type="text" id="search" placeholder="Cari Nama / NO_KK..." onkeyup="filterData()">
+    <select id="filterStatus" onchange="filterData()">
+      <option value="semua">Semua Status</option>
+      <option value="belum">Belum Lunas Pangkal</option>
+      <option value="lunas">Sudah Lunas Pangkal</option>
+      <option value="belum_ling">Belum Lunas Lingkungan</option>
+      <option value="belum_mati">Belum Lunas Kematian</option>
+    </select>
+  </div>
+  <div style="flex:1;overflow:auto">
+    <table>
+      <thead><tr><th>No</th><th>NO_KK</th><th>Nama</th><th>Lingkungan</th><th>Pangkal Lingkungan</th><th>Pangkal Kematian</th><th>Status Lingkungan</th><th>Status Kematian</th><th>Total Status</th><th>Aksi</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:10px;background:#ddd6fe;padding:10px;border-radius:10px;display:flex;justify-content:space-around;text-align:center">
+    <div><b id="countLunas">0</b><br><small>SUDAH LUNAS 2-2NYA</small></div>
+    <div><b id="countBelum">0</b><br><small>BELUM LUNAS</small></div>
+    <div><b id="totalUang">Rp 0</b><br><small>UANG PANGKAL MASUK</small></div>
+  </div>
+</div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",databaseURL:"https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"restopro2026-60038"};
+firebase.initializeApp(firebaseConfig);const db=firebase.database();
+let dataList=[],filtered=[];
+db.ref("STEVEN/STEVEN_dataWarga").on("value",s=>{dataList=s.val()||[];filterData()});
+function filterData(){
+  let key=document.getElementById('search').value.toLowerCase();
+  let f=document.getElementById('filterStatus').value;
+  filtered=dataList.filter(d=>{
+    if(key &&!(d.no_kk||'').toLowerCase().includes(key) &&!(d.nama||'').toLowerCase().includes(key)) return false;
+    let l=d.lunas_pangkal_lingkungan===true||d.lunas_pangkal_lingkungan==="true";
+    let m=d.lunas_pangkal_kematian===true||d.lunas_pangkal_kematian==="true";
+    if(f==='belum' && l&&m) return false;
+    if(f==='lunas' && (!l||!m)) return false;
+    if(f==='belum_ling' && l) return false;
+    if(f==='belum_mati' && m) return false;
+    return true;
+  });
+  render();
+}
+function render(){
+  let tbody=document.getElementById('tbody');tbody.innerHTML="";
+  let lunas=0,belum=0,uang=0;
+  filtered.forEach((d,i)=>{
+    let idx=dataList.indexOf(d);
+    let pL=parseInt(d.pangkal_lingkungan)||0, pM=parseInt(d.pangkal_kematian)||0;
+    let l=d.lunas_pangkal_lingkungan===true||d.lunas_pangkal_lingkungan==="true";
+    let m=d.lunas_pangkal_kematian===true||d.lunas_pangkal_kematian==="true";
+    if(l&&m){lunas++;uang+=pL+pM}else belum++;
+    let totalSt=l&&m?`<span class="lunas">LUNAS SEMUA</span>`:`<span class="belum">BELUM LUNAS</span>`;
+    tbody.innerHTML+=`<tr>
+      <td>${i+1}</td><td><b>${d.no_kk||'-'}</b></td><td>${d.nama}</td><td>${d.lingkungan_utama||'-'}</td>
+      <td>Rp ${pL.toLocaleString('id-ID')}</td><td>Rp ${pM.toLocaleString('id-ID')}</td>
+      <td>${l?`<span class="lunas">LUNAS</span>`:`<span class="belum">BELUM</span>`}</td>
+      <td>${m?`<span class="lunas">LUNAS</span>`:`<span class="belum">BELUM</span>`}</td>
+      <td>${totalSt}</td>
+      <td>
+        ${!l?`<button class="btn btn-belum" onclick="bayar('lingkungan',${idx})">Lunasi Ling.</button>`:''}
+        ${!m?`<button class="btn btn-belum" onclick="bayar('kematian',${idx})">Lunasi Mati</button>`:''}
+        ${l&&m?`<button class="btn btn-lunas" onclick="batal(${idx})">Batal Lunas</button>`:''}
+      </td>
+    </tr>`;
+  });
+  document.getElementById('countLunas').innerText=lunas+" Org";
+  document.getElementById('countBelum').innerText=belum+" Org";
+  document.getElementById('totalUang').innerText="Rp "+uang.toLocaleString('id-ID');
+}
+function bayar(jenis,idx){
+  if(confirm("Lunasi Pangkal "+jenis+" untuk "+dataList[idx].nama+"?")){
+    if(jenis==='lingkungan') dataList[idx].lunas_pangkal_lingkungan=true;
+    if(jenis==='kematian') dataList[idx].lunas_pangkal_kematian=true;
+    db.ref("STEVEN/STEVEN_dataWarga").set(dataList);
+  }
+}
+function batal(idx){
+  if(confirm("Batalkan status lunas untuk "+dataList[idx].nama+"?")){
+    dataList[idx].lunas_pangkal_lingkungan=false;
+    dataList[idx].lunas_pangkal_kematian=false;
+    db.ref("STEVEN/STEVEN_dataWarga").set(dataList);
+  }
+}
+</script>
+</body>
+</html>

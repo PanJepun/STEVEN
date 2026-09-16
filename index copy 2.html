@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Data Warga STEVEN PREMIUM</title>
+<style>
+    * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial;
+    margin:0; padding:12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height:100vh; overflow:hidden;
+  }
+.wrapper { display:flex; gap:12px; height:calc(100vh - 24px); }
+
+.form-panel,.list-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  padding:12px;
+  border-radius:16px;
+  box-shadow:0 8px 32px rgba(31, 38, 135, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.form-panel { width:45%; overflow-y:auto; }
+.list-panel { width:55%; display:flex; flex-direction:column; }
+
+.form-panel h3,.list-panel h3 {
+  margin:0 0 10px 0;
+  color:#4c1d95;
+  font-size:15px;
+  text-align:center;
+  border-bottom:2px solid #8b5cf6;
+  padding-bottom:6px;
+  font-weight:700;
+}
+
+.form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+.full { grid-column: span 2; }
+  label { font-size:10px; font-weight:600; display:block; margin-bottom:3px; color:#4b5563; }
+  input, select {
+    width:100%; padding:5px 7px; font-size:10px;
+    border:1px solid #d1d5db; border-radius:6px; height:26px;
+    background: rgba(255,255,255,0.8);
+  }
+  input:focus, select:focus {
+    border-color:#8b5cf6; outline:none;
+    background:#fff;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
+.preview-img {
+  width:55px; height:55px; border-radius:50%; object-fit:cover;
+  border:3px solid #8b5cf6; margin:5px auto; display:block;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+}
+
+.dropdown-group { display:flex; gap:4px; align-items:center; }
+.dropdown-group select { flex:1; }
+.btn-plus {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color:white; border:none; border-radius:6px; width:26px; height:26px; cursor:pointer; font-weight:bold; font-size:12px;
+}
+.btn-del {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color:white; border:none; border-radius:6px; width:26px; height:26px; cursor:pointer; font-weight:bold; font-size:12px;
+}
+
+.btn-wrap { display:flex; gap:6px; margin-top:10px; }
+.btn {
+  flex:1; padding:7px; background: linear-gradient(135deg, #10b981, #059669);
+  color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:11px;
+}
+.btn-update { background: linear-gradient(135deg, #f59e0b, #d97706); display:none; }
+.btn-reset { background: linear-gradient(135deg, #64748b, #475569); }
+
+/* SEARCH BOX 3 KOLOM DI BARIS 1 */
+.search-box { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-bottom:6px; }
+
+.table-wrap { flex:1; overflow:auto; border-radius:10px; }
+  table { width:100%; border-collapse:collapse; font-size:9px; background:white; border-radius:10px; overflow:hidden; }
+  th {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color:white; padding:5px; position:sticky; top:0; font-weight:600;
+  }
+  td { border-bottom:1px solid #f1f5f9; padding:4px; cursor:pointer; vertical-align:middle; text-align:center; }
+.foto-tabel { width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:pointer; border:2px solid #e5e7eb; }
+  tr:hover { background:#f5f3ff; }
+  tr.selected { background:#ddd6fe!important; }
+
+.btn-hapus {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color:white; border:none; border-radius:5px; padding:3px 6px;
+    font-size:9px; font-weight:bold; cursor:pointer;
+  }
+
+.modal { display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; }
+.modal img { max-width:90%; max-height:90%; border-radius:12px; border:4px solid white; }
+.modal span { position:absolute; top:20px; right:30px; color:white; font-size:30px; cursor:pointer; }
+</style>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div class="wrapper">
+  <!-- KIRI FORM -->
+  <div class="form-panel">
+    <h3>FORM DATA ENTRY - STEVEN</h3>
+    <form id="formWarga">
+      <input type="hidden" id="editIndex" value="-1">
+      <input type="hidden" id="fotoBase64" name="foto">
+      <div class="form-grid">
+        <div><label>Tgl Daftar</label><input type="date" name="tgl" required></div>
+        <div><label>User ID</label><input type="text" name="userid"></div>
+        <div><label>No. KTP</label><input type="text" name="nik" maxlength="16"></div>
+        <div><label>Nama</label><input type="text" name="nama" required></div>
+        <div class="full"><label>Alamat</label><input type="text" name="alamat"></div>
+        <div><label>Lingkungan Utama</label><input type="text" name="lingkungan_utama"></div>
+        <div><label>Sub Lingkungan</label><input type="text" name="sub_lingkungan"></div>
+        <div><label>Tempat Lahir</label><input type="text" name="tempat"></div>
+        <div><label>Tgl Lahir</label><input type="date" name="tgllahir"></div>
+        <div><label>Jenis Kelamin</label><select name="jk"><option>Laki-Laki</option><option>Perempuan</option></select></div>
+        <div>
+          <label>Gol Darah</label>
+          <div class="dropdown-group">
+            <select name="gol" id="selectGol"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('gol')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('gol')">x</button>
+          </div>
+        </div>
+        <div class="full"><label>Pekerjaan</label><input type="text" name="pekerjaan"></div>
+        <div class="full"><label>Hobby</label><input type="text" name="hobby"></div>
+        <div>
+          <label>Status</label>
+          <div class="dropdown-group">
+            <select name="status" id="selectStatus"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('status')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('status')">x</button>
+          </div>
+        </div>
+        <div><label>No. HP</label><input type="text" name="hp"></div>
+        <div><label>Iuran Kel</label><input type="number" name="iuran_kel"></div>
+        <div><label>Iuran Kem</label><input type="number" name="iuran_kem"></div>
+        <div><label>Kelompok</label><input type="text" name="kelompok"></div>
+        <div>
+          <label>Status Rumah</label>
+          <div class="dropdown-group">
+            <select name="status_rumah" id="selectRumah"></select>
+            <button type="button" class="btn-plus" onclick="showAdd('rumah')">+</button>
+            <button type="button" class="btn-del" onclick="showDel('rumah')">x</button>
+          </div>
+        </div>
+        <div class="full" style="text-align:center; margin-top:5px;">
+          <label>Foto</label>
+          <input type="file" id="inputFoto" accept="image/*">
+          <img id="preview" class="preview-img" src="https://via.placeholder.com/55/CCCCCC/FFFFFF?text=Foto">
+        </div>
+      </div>
+      <div class="btn-wrap">
+        <button type="submit" id="btnSimpan" class="btn">+ Simpan</button>
+        <button type="button" id="btnUpdate" class="btn btn-update">Update</button>
+        <button type="button" id="btnReset" class="btn btn-reset">Reset</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- KAN TABEL + SEARCH -->
+  <div class="list-panel">
+    <h3>DATA YANG SUDAH MASUK - Klik untuk Edit</h3>
+
+    <!-- BARIS 1 SEARCH: USERID, NAMA, LINGKUNGAN -->
+    <div class="search-box">
+      <input type="text" id="searchUserid" placeholder="Cari User ID..." onkeyup="filterData()">
+      <input type="text" id="searchNama" placeholder="Cari Nama..." onkeyup="filterData()">
+      <input type="text" id="searchLingkungan" placeholder="Cari Lingkungan Utama..." onkeyup="filterData()">
+    </div>
+    <!-- BARIS 2 SEARCH: SUB, KELOMPOK -->
+    <div class="search-box">
+      <input type="text" id="searchSub" placeholder="Cari Sub Lingkungan..." onkeyup="filterData()">
+      <input type="text" id="searchKelompok" placeholder="Cari Kelompok..." onkeyup="filterData()">
+      <div></div> <!-- Kosongin biar 3 kolom -->
+    </div>
+
+    <div class="table-wrap">
+      <table id="tabelData">
+        <thead><tr><th>Foto</th><th>User ID</th><th>Nama</th><th>NIK</th><th>Lingk.</th><th>Sub</th><th>Kelompok</th><th>JK</th><th>Status</th><th>HP</th><th>Aksi</th></tr></thead> <!-- TAMBAH USERID -->
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVIEW BESAR -->
+<div id="modalFoto" class="modal">
+  <span onclick="document.getElementById('modalFoto').style.display='none'">&times;</span>
+  <img id="modalImg">
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",
+  authDomain: "restopro2026-60038.firebaseapp.com",
+  databaseURL: "https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "restopro2026-60038"
+};
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let dataList = [];
+let dataFiltered = [];
+let editIndex = -1;
+let dropdownData = {
+  status: ["Single","Menikah","Janda","Duda"],
+  rumah: ["Milik Sendiri","Sewa","Kontrak","Pinjam"],
+  gol: ["-","A","B","AB","O"]
+};
+const PATH = "STEVEN";
+const form = document.getElementById("formWarga");
+const inputFoto = document.getElementById("inputFoto");
+const preview = document.getElementById("preview");
+
+// ENTER PINDAH KOLOM
+form.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const inputs = Array.from(form.querySelectorAll('input, select, button'));
+    const index = inputs.indexOf(document.activeElement);
+    if (index > -1 && index < inputs.length - 1) inputs[index + 1].focus();
+  }
+});
+
+// LOAD DATA
+db.ref(PATH + "/dataWarga").on("value", (snapshot) => {
+  dataList = snapshot.val() || [];
+  filterData();
+});
+db.ref(PATH + "/dropdownData").on("value", (snapshot) => {
+  dropdownData = snapshot.val() || dropdownData;
+  renderAll();
+});
+
+function saveDataWarga(){ db.ref(PATH + "/dataWarga").set(dataList); }
+function saveDropdown(){ db.ref(PATH + "/dropdownData").set(dropdownData); }
+
+inputFoto.addEventListener("change", function(){
+  let file = this.files[0];
+  if(file){
+    let reader = new FileReader();
+    reader.onload = e => { preview.src = e.target.result; document.getElementById("fotoBase64").value = e.target.result; }
+    reader.readAsDataURL(file);
+  }
+});
+
+function renderAll(){ renderSelect('status'); renderSelect('rumah'); renderSelect('gol'); }
+function renderSelect(type){
+  let select = document.getElementById('select' + type.charAt(0).toUpperCase() + type.slice(1));
+  let valSekarang = select.value;
+  select.innerHTML = "";
+  dropdownData[type].forEach(item=>{ select.innerHTML += `<option>${item}</option>`; });
+  select.value = valSekarang;
+}
+
+function showAdd(type){
+  let val = prompt("Tambah opsi baru untuk " + type);
+  if(val && val.trim() &&!dropdownData[type].includes(val.trim())){
+    dropdownData[type].push(val.trim());
+    renderAll();
+    saveDropdown();
+  }
+}
+
+function showDel(type){
+  let val = document.getElementById('select' + type.charAt(0).toUpperCase() + type.slice(1)).value;
+  if(val && confirm("Hapus opsi: " + val + "?")){
+    dropdownData[type] = dropdownData[type].filter(item => item!== val);
+    renderAll();
+    saveDropdown();
+  }
+}
+
+form.addEventListener("submit", function(e){
+  e.preventDefault();
+  let formData = new FormData(this);
+  let data = {};
+  formData.forEach((v,k)=> data[k]=v);
+  dataList.push(data);
+  saveDataWarga();
+  filterData();
+  resetForm();
+  form.elements['tgl'].focus();
+});
+
+function filterData(){
+  let userid = document.getElementById('searchUserid').value.toLowerCase(); // BARU
+  let nama = document.getElementById('searchNama').value.toLowerCase();
+  let lingk = document.getElementById('searchLingkungan').value.toLowerCase();
+  let sub = document.getElementById('searchSub').value.toLowerCase();
+  let kelompok = document.getElementById('searchKelompok').value.toLowerCase();
+
+  dataFiltered = dataList.filter(d => {
+    return (d.userid || '').toLowerCase().includes(userid) && // BARU
+           (d.nama || '').toLowerCase().includes(nama) &&
+           (d.lingkungan_utama || '').toLowerCase().includes(lingk) &&
+           (d.sub_lingkungan || '').toLowerCase().includes(sub) &&
+           (d.kelompok || '').toLowerCase().includes(kelompok);
+  });
+  renderTable();
+}
+
+function renderTable(){
+  let tbody = document.querySelector("#tabelData tbody");
+  tbody.innerHTML = "";
+  let dataToShow = dataFiltered.length > 0 || document.getElementById('searchNama').value? dataFiltered : dataList;
+  dataToShow.forEach((d)=>{
+    let foto = d.foto || "https://via.placeholder.com/30/CCCCCC/FFFFFF?text=?";
+    let indexAsli = dataList.indexOf(d);
+    let tr = document.createElement("tr");
+    tr.innerHTML = `<td><img class="foto-tabel" src="${foto}" ondblclick="showModal('${foto}')"></td>
+      <td>${d.userid || '-'}</td><td>${d.nama}</td><td>${d.nik}</td><td>${d.lingkungan_utama || '-'}</td><td>${d.sub_lingkungan || '-'}</td> <!-- TAMBAH USERID -->
+      <td>${d.kelompok || '-'}</td><td>${d.jk}</td><td>${d.status}</td><td>${d.hp}</td>
+      <td><button class="btn-hapus" onclick="hapusData(${indexAsli})">Hapus</button></td>`;
+    tr.onclick = (e) => { if(e.target.tagName!== 'BUTTON') loadToForm(indexAsli, tr); }
+    tbody.appendChild(tr);
+  });
+}
+
+function hapusData(index){
+  let nama = dataList[index].nama;
+  if(confirm("Yakin mau hapus data: " + nama + "?")){
+    dataList.splice(index, 1);
+    saveDataWarga();
+    filterData();
+    resetForm();
+  }
+}
+
+function showModal(src){
+  document.getElementById('modalImg').src = src;
+  document.getElementById('modalFoto').style.display = 'flex';
+}
+
+function loadToForm(index, row){
+  editIndex = index;
+  document.querySelectorAll("#tabelData tr").forEach(r=>r.classList.remove("selected"));
+  row.classList.add("selected");
+  let data = dataList[index];
+  for(let key in data){ if(form.elements[key]) form.elements[key].value = data[key]; }
+  preview.src = data.foto || "https://via.placeholder.com/55/CCCCCC/FFFFFF?text=Foto";
+  document.getElementById("btnSimpan").style.display = "none";
+  document.getElementById("btnUpdate").style.display = "block";
+}
+
+document.getElementById("btnUpdate").onclick = function(){
+  let formData = new FormData(form);
+  let data = {};
+  formData.forEach((v,k)=> data[k]=v);
+  dataList[editIndex] = data;
+  saveDataWarga();
+  filterData();
+  resetForm();
+}
+
+document.getElementById("btnReset").onclick = resetForm;
+function resetForm(){
+  form.reset();
+  preview.src = "https://via.placeholder.com/55/CCCCCC/FFFFFF?text=Foto";
+  document.getElementById("fotoBase64").value = "";
+  editIndex = -1;
+  document.getElementById("btnSimpan").style.display = "block";
+  document.getElementById("btnUpdate").style.display = "none";
+  document.querySelectorAll("#tabelData tr").forEach(r=>r.classList.remove("selected"));
+  form.elements['tgl'].focus();
+}
+
+renderAll();
+form.elements['tgl'].focus();
+</script>
+</body>
+</html>

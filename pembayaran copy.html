@@ -1,0 +1,71 @@
+<script>
+// GANTI FUNGSI INI AJA BEB, SISANYA PUNYA KAMU UDAH BENER
+
+function tglIndo(tgl){
+  if(!tgl||tgl=='-'||tgl=='') return '-';
+  let b=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  let p=tgl.split('-'); if(p.length!=3) return tgl;
+  return `${p[2]} ${b[parseInt(p[1])-1]} ${p[0]}`;
+}
+
+function filterData(){
+  let tahun = document.getElementById('selectTahun').value;
+  let bulan = document.getElementById('selectBulan').value;
+  let key = document.getElementById('search').value.toLowerCase();
+  // INI KUNCINYA BEB - KEMATIAN BULANAN PAKAI 2026-09, TAHUNAN PAKAI 2026
+  let periode = tipeIuran === 'kematian'? `${tahun}-${bulan.padStart(2,'0')}` : tahun;
+  if(key === ''){ dataFiltered = dataList; } 
+  else { dataFiltered = dataList.filter(d => (d.no_kk||'').toLowerCase().includes(key) || (d.nama||'').toLowerCase().includes(key)); }
+  renderTable(periode);
+}
+
+function renderTable(periode){
+  let tbody = document.querySelector("#tabelIuran tbody");
+  tbody.innerHTML = "";
+  let jmlLunas = 0, jmlBelum = 0, totalUangMasuk = 0, totalHarusnya = 0;
+
+  dataFiltered.forEach((d,i)=>{
+    let indexAsli = dataList.indexOf(d);
+    let no_kk = d.no_kk || '-';
+    let nama = d.nama || '-';
+    let status_keluarga = d.status_keluarga || '-';
+    let lingkungan = d.lingkungan_utama || d.kelompok || '-';
+
+    // INI FIX NOMINAL DARI MASTER BEB - BUKAN DEFAULT
+    let tarifMaster = 0;
+    if(tipeIuran === 'kematian'){
+      tarifMaster = parseInt(d.iuran_kematian) || 0; // dari master kematian bulanan
+    } else {
+      tarifMaster = parseInt(d.iuran_tahunan) || parseInt(d.iuran_lingkungan) || 0; // dari master tahunan 150rb
+    }
+
+    let fieldRiwayat = tipeIuran === 'kematian'? 'riwayat_kematian' : 'riwayat_tahunan';
+    if(!d[fieldRiwayat]) d[fieldRiwayat] = {};
+    let dataBayar = d[fieldRiwayat][periode] || {};
+
+    let status = dataBayar.status === "Lunas"? '<span class="lunas">LUNAS</span>' : '<span class="belum">BELUM</span>';
+    let tglBayar = dataBayar.tanggal? tglIndo(dataBayar.tanggal) : '-'; // SUDAH INDONESIA BEB
+    let jumlahBayar = parseInt(dataBayar.jumlah) || 0;
+
+    totalHarusnya += tarifMaster;
+    if(dataBayar.status === "Lunas"){ jmlLunas++; totalUangMasuk += jumlahBayar; }
+    else { jmlBelum++; }
+
+    let btnAksi = dataBayar.status === "Lunas"
+      ? `<button class="btn btn-kwitansi" onclick="cetakKwitansi(${indexAsli},'${periode}')">Kwitansi</button> <button class="btn btn-batal" onclick="batalBayar(${indexAsli},'${periode}')">Batal</button>`
+      : `<button class="btn btn-bayar" onclick="bukaModal(${indexAsli},'${periode}',${tarifMaster})">Bayar</button>`;
+
+    tbody.innerHTML += `<tr>
+      <td>${i+1}</td><td><b>${no_kk}</b></td><td>${nama}</td>
+      <td>${status_keluarga}</td><td>${lingkungan}</td>
+      <td>Rp ${tarifMaster.toLocaleString('id-ID')}</td><td>${status}</td>
+      <td>${tglBayar}</td><td>${btnAksi}</td>
+    </tr>`;
+  });
+
+  document.getElementById("totalLunas").innerText = jmlLunas + " Orang";
+  document.getElementById("totalBelum").innerText = jmlBelum + " Orang";
+  document.getElementById("uangMasuk").innerText = "Rp " + totalUangMasuk.toLocaleString('id-ID');
+  document.getElementById("uangKurang").innerText = "Rp " + (totalHarusnya - totalUangMasuk).toLocaleString('id-ID');
+}
+</script>

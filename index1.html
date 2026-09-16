@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>DASHBOARD PERUSAHAAN</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #bbcc7c; }
+.navbar { background-color: #131516; display: flex; gap: 12px; padding: 12px 20px; border-radius: 0 0 15px 15px; flex-wrap: wrap; }
+.navbar a { color: #FFFFFF!important; padding: 10px 18px; text-decoration: none; font-weight: bold; border-radius: 20px; transition: 0.3s; font-size: 14px; opacity: 0.7; cursor: pointer; text-shadow: 1px 1px 3px rgba(0,0,0,0.6); margin: 5px; }
+.navbar a:hover { transform: translateY(-2px); opacity: 1; }
+.navbar a.active { opacity: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: scale(1.05); }
+.content { padding: 20px 40px; }
+.marquee { background: #e67e22; color: white; padding: 12px 0; font-weight: bold; font-size: 16px; border-radius: 8px; margin-bottom: 20px; overflow: hidden; white-space: nowrap; }
+.marquee span { display: inline-block; padding-left: 100%; animation: marquee 15s linear infinite; }
+@keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
+    /* SLIDER FIX - PENTING */
+.slider { position: relative; width: 100%; aspect-ratio: 16/9; max-height: 400px; border-radius: 12px; overflow: hidden; margin-bottom: 20px; background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+.slide { position: absolute; top:0; left:0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease-in-out; } /* INI KUNCINYA */
+.slide.active { opacity: 1; z-index:2; }
+.slide img { width: 100%; height: 100%; object-fit: cover; }
+.slide-caption { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.8)); color:white; padding:15px 20px; font-weight:bold; font-size:15px; }
+.slider-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.4); color:white; border:none; padding:12px 16px; cursor:pointer; font-size:22px; border-radius:50%; z-index:10; transition:0.3s; }
+.slider-btn:hover { background:rgba(0,0,0,0.8); }
+.prev { left:15px; }.next { right:15px; }
+
+.card { background: rgba(243, 242, 237, 0.753); padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.card h3 { margin-top: 0; color: #2c3e50; font-size:14px; }
+.card p { font-size: 24px; font-weight: bold; color: #e67e22; margin: 10px 0 0 0; }
+.nav-dashboard { background: #FF8C00; }
+.nav-master { background: #228B22; }
+.nav-pembayaran { background: #1E5A96; }
+.nav-selesai { background: #6A0DAD; }
+.nav-kontakme { background: #C71585; }
+.loading-slider { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; color:white; font-size:16px; z-index:0; }
+  </style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <div class="navbar">
+    <a href="dashboard.html" class="nav-dashboard active">DASHBOARD</a>
+    <a href="master.html" class="nav-master">MASTER DATA</a>
+    <a href="pembayaran.html" class="nav-pembayaran">PEMBAYARAN</a>
+    <a href="selesai.html" class="nav-selesai">SELESAI</a>
+    <a href="https://wa.me/6282340152478" target="_blank" class="nav-kontakme">Contact US : Ivan Made Diarsa 082340152478</a>
+  </div>
+
+  <div class="content">
+    <h1>DASHBOARD PERUSAHAAN</h1>
+
+    <div class="marquee">
+      <span>🔥 SELAMAT DATANG DI DASHBOARD PERUSAHAAN STEVEN | UPDATE DATA OTOMATIS 🔥</span>
+   </div>
+
+    <!-- SLIDER -->
+    <div class="slider" id="sliderMaster">
+      <div class="loading-slider"><i class="fa fa-spinner fa-spin"></i> Memuat Foto...</div>
+      <button class="slider-btn prev" onclick="prevSlide()">❮</button>
+      <button class="slider-btn next" onclick="nextSlide()">❯</button>
+    </div>
+
+    <div class="card">
+      <h3>Total Warga</h3>
+      <p id="totalWarga">0 Orang</p>
+    </div>
+    <div class="card">
+      <h3>Total KK</h3>
+      <p id="totalKK">0 KK</p>
+    </div>
+  </div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD6r1mm0Fm0gIioG2UcWQZt0XJtHQj15iI",
+  databaseURL: "https://restopro2026-60038-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "restopro2026-60038"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let currentSlide = 0;
+let slideInterval;
+const PATH = "STEVEN";
+
+db.ref(PATH + "/STEVEN_dataWarga").on("value", (snapshot) => {
+  let dataObj = snapshot.val() || {};
+  let dataWarga = Object.values(dataObj);
+  renderSlider(dataWarga);
+  updateRekap(dataWarga);
+});
+
+function renderSlider(data){
+  const sliderDiv = document.getElementById('sliderMaster');
+  let btnPrev = `<button class="slider-btn prev" onclick="prevSlide()">❮</button>`;
+  let btnNext = `<button class="slider-btn next" onclick="nextSlide()">❯</button>`;
+  
+  let dataDenganFoto = data.filter(d => d.foto && d.foto!== '').slice(0, 5);
+
+  let slidesHTML = '';
+  dataDenganFoto.forEach((d, i)=>{
+    let active = i === 0? 'active' : '';
+    slidesHTML += `
+      <div class="slide ${active}">
+        <img src="${d.foto}" alt="${d.nama}">
+        <div class="slide-caption">${d.nama} - ${d.lingkungan_utama || d.kelompok || 'STEVEN'}</div>
+      </div>
+    `;
+  });
+
+  sliderDiv.innerHTML = `<div class="loading-slider"><i class="fa fa-spinner fa-spin"></i> Memuat Foto...</div>` + btnPrev + btnNext + slidesHTML;
+
+  clearInterval(slideInterval);
+  currentSlide = 0;
+  if(dataDenganFoto.length > 1){
+    slideInterval = setInterval(nextSlide, 3500);
+  } else {
+    document.querySelector('.loading-slider').style.display = 'none';
+  }
+}
+
+function getSlides(){
+  return document.querySelectorAll('#sliderMaster.slide');
+}
+
+function nextSlide() {
+  const slides = getSlides();
+  if(slides.length <= 1) return;
+  slides[currentSlide].classList.remove('active');
+  currentSlide = (currentSlide + 1) % slides.length;
+  slides[currentSlide].classList.add('active');
+}
+
+function prevSlide() {
+  const slides = getSlides();
+  if(slides.length <= 1) return;
+  slides[currentSlide].classList.remove('active');
+  currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+  slides[currentSlide].classList.add('active');
+}
+
+function updateRekap(data){
+  let totalWarga = data.length;
+  let totalKK = [...new Set(data.map(d => d.no_kk))].length;
+  document.getElementById('totalWarga').innerText = totalWarga + " Orang";
+  document.getElementById('totalKK').innerText = totalKK + " KK";
+}
+</script>
+
+</body>
+</html>
